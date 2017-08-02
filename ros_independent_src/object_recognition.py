@@ -14,6 +14,10 @@ from random import randint
 import struct
 
 
+
+DEV_FLAG = 1
+OUTPUT_PCD_DIRECTORY = "output_pcd_files"
+
 def random_color_gen():
     """ Generates a random color
 
@@ -90,16 +94,15 @@ def pcl_callback(pcl_msg):
 
 # Exercise-2 TODOs: segment and cluster the objects
 
-    # TODO: Convert ROS msg to PCL data
-    # cloud = ros_to_pcl(pcl_msg)
-    cloud = pcl_msg
+    if DEV_FLAG == 1:
+        cloud = pcl_msg
+    else:
+        # TODO uncomment in production
+        #cloud = ros_to_pcl(pcl_msg)
+        pass
 
-    # # TODO generate a sample point cloud, and feed it to the function, or save it for future use
-    # sample_filename = "mycloud.pcd"
-    # pcl.save(sample_filename)
 
-
-    # TODO: Voxel Grid Downsampling
+    # Voxel Grid Downsampling
     vox = cloud.make_voxel_grid_filter()
     LEAF_SIZE = .01
 
@@ -108,6 +111,10 @@ def pcl_callback(pcl_msg):
 
     # Call the filter function to obtain the resultant downsampled point cloud
     cloud_filtered = vox.filter()
+
+
+    pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/voxel_downsampled.pcd")
+
     # TODO: PassThrough Filter
     passthrough = cloud_filtered.make_passthrough_filter()
 
