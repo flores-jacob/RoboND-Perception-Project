@@ -120,7 +120,7 @@ def pcl_callback(pcl_msg):
     filter_axis = 'z'
     passthrough_z.set_filter_field_name(filter_axis)
     axis_min = .6101
-    axis_max = 1
+    axis_max = .9
     passthrough_z.set_filter_limits(axis_min, axis_max)
 
     # Finally use the filter function to obtain the resultant point cloud.
