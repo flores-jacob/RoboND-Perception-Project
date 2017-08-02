@@ -13,6 +13,9 @@ import pcl
 from random import randint
 import struct
 
+DEV_FLAG = 1
+OUTPUT_PCD_DIRECTORY = "output_pcd_files"
+
 
 def random_color_gen():
     """ Generates a random color
@@ -26,6 +29,7 @@ def random_color_gen():
     g = randint(0, 255)
     b = randint(0, 255)
     return [r, g, b]
+
 
 def get_color_list(cluster_count):
     """ Returns a list of randomized colors
@@ -84,22 +88,19 @@ def rgb_to_float(color):
 
     return float_rgb
 
+
 # Callback function for your Point Cloud Subscriber
 def pcl_callback(pcl_msg):
+    # Exercise-2 TODOs: segment and cluster the objects
 
+    if DEV_FLAG == 1:
+        cloud = pcl_msg
+    else:
+        # TODO uncomment in production
+        # cloud = ros_to_pcl(pcl_msg)
+        pass
 
-# Exercise-2 TODOs: segment and cluster the objects
-
-    # TODO: Convert ROS msg to PCL data
-    # cloud = ros_to_pcl(pcl_msg)
-    cloud = pcl_msg
-
-    # # TODO generate a sample point cloud, and feed it to the function, or save it for future use
-    # sample_filename = "mycloud.pcd"
-    # pcl.save(sample_filename)
-
-
-    # TODO: Voxel Grid Downsampling
+    # Voxel Grid Downsampling
     vox = cloud.make_voxel_grid_filter()
     LEAF_SIZE = .01
 
@@ -108,111 +109,129 @@ def pcl_callback(pcl_msg):
 
     # Call the filter function to obtain the resultant downsampled point cloud
     cloud_filtered = vox.filter()
-    # TODO: PassThrough Filter
-    passthrough = cloud_filtered.make_passthrough_filter()
 
+    pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/voxel_downsampled.pcd")
+    print("voxel downsampled cloud saved")
+
+    # PassThrough Filter for z axis to remove table
+    passthrough_z = cloud_filtered.make_passthrough_filter()
 
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
-    passthrough.set_filter_field_name(filter_axis)
-    axis_min = 0
-    axis_max = 5
-    passthrough.set_filter_limits(axis_min, axis_max)
+    passthrough_z.set_filter_field_name(filter_axis)
+    axis_min = .6101
+    axis_max = 1
+    passthrough_z.set_filter_limits(axis_min, axis_max)
 
     # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered = passthrough.filter()
+    cloud_filtered = passthrough_z.filter()
 
-    # TODO: RANSAC Plane Segmentation
-    seg = cloud_filtered.make_segmenter()
+    passthrough_x = cloud_filtered.make_passthrough_filter()
 
-    # Set the model you wish to fit
-    seg.set_model_type(pcl.SACMODEL_PLANE)
-    seg.set_method_type(pcl.SAC_RANSAC)
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'x'
+    passthrough_x.set_filter_field_name(filter_axis)
+    axis_min = .325
+    axis_max = .95
+    passthrough_x.set_filter_limits(axis_min, axis_max)
 
-    # Max distance for a point to be considered fitting the model
-    # Experiment with different values for max_distance
-    # for segmenting the table
-    max_distance = .01
-    seg.set_distance_threshold(max_distance)
+    cloud_filtered = passthrough_x.filter()
 
-    # Call the segment function to obtain set of inlier indices and model coefficients
-    inliers, coefficients = seg.segment()
+    pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
+    print("passthrough filtered cloud saved")
 
-    # TODO: Extract inliers and outliers
-    # Extract inliers
-    cloud_table = cloud_filtered.extract(inliers, negative=False)
-    cloud_objects = cloud_filtered.extract(inliers, negative=True)
 
-    # TODO: Euclidean Clustering
-    white_cloud = XYZRGB_to_XYZ(cloud_objects)
-    tree = white_cloud.make_kdtree()
-
-    # TODO: Create Cluster-Mask Point Cloud to visualize each cluster separately
-    # Create a cluster extraction object
-    ec = white_cloud.make_EuclideanClusterExtraction()
-    # Set tolerances for distance threshold
-    # as well as minimum and maximum cluster size (in points)
-    # NOTE: These are poor choices of clustering parameters
-    # Your task is to experiment and find values that work for segmenting objects.
-    ec.set_ClusterTolerance(0.03)
-    ec.set_MinClusterSize(100)
-    ec.set_MaxClusterSize(1500)
-    # Search the k-d tree for clusters
-    ec.set_SearchMethod(tree)
-    # Extract indices for each of the discovered clusters
-    cluster_indices = ec.Extract()
-
-    cluster_color = get_color_list(len(cluster_indices))
-
-    color_cluster_point_list = []
-
-    for j, indices in enumerate(cluster_indices):
-        for i, indice in enumerate(indices):
-            color_cluster_point_list.append([white_cloud[indice][0],
-                                             white_cloud[indice][1],
-                                             white_cloud[indice][2],
-                                             rgb_to_float(cluster_color[j])])
-
-    # Create new cloud containing all clusters, each with unique color
-    cluster_cloud = pcl.PointCloud_PointXYZRGB()
-    cluster_cloud.from_list(color_cluster_point_list)
-
-    # TODO remove in production
-    filename = 'cluster.pcd'
-    pcl.save(cluster_cloud, filename)
-
-    # TODO: Convert PCL data to ROS messages
-    # ros_cloud_objects = pcl_to_ros(cloud_objects)
-    # ros_cloud_objects = pcl_to_ros(cluster_cloud)
-    # ros_cloud_table = pcl_to_ros(cloud_table)
-
-    # TODO: Publish ROS messages
-    # pcl_objects_pub.publish(ros_cloud_objects)
-    # pcl_table_pub.publish(ros_cloud_table)
-
-# Exercise-3 TODOs: identify the objects
-
-    # Classify the clusters! (loop through each detected cluster one at a time)
-
-        # Grab the points for the cluster
-
-        # Compute the associated feature vector
-
-        # Make the prediction
-
-        # Publish a label into RViz
-
-        # Add the detected object to the list of detected objects.
-
-    # Publish the list of detected objects
-
-    # Suggested location for where to invoke your pr2_mover() function within pcl_callback()
-    # Could add some logic to determine whether or not your object detections are robust
-    # before calling pr2_mover()
-    # try:
-    #     pr2_mover(detected_objects_list)
-    # except rospy.ROSInterruptException:
-    #     pass
+#     # TODO: RANSAC Plane Segmentation
+#     seg = cloud_filtered.make_segmenter()
+#
+#     # Set the model you wish to fit
+#     seg.set_model_type(pcl.SACMODEL_PLANE)
+#     seg.set_method_type(pcl.SAC_RANSAC)
+#
+#     # Max distance for a point to be considered fitting the model
+#     # Experiment with different values for max_distance
+#     # for segmenting the table
+#     max_distance = .01
+#     seg.set_distance_threshold(max_distance)
+#
+#     # Call the segment function to obtain set of inlier indices and model coefficients
+#     inliers, coefficients = seg.segment()
+#
+#     # TODO: Extract inliers and outliers
+#     # Extract inliers
+#     cloud_table = cloud_filtered.extract(inliers, negative=False)
+#     cloud_objects = cloud_filtered.extract(inliers, negative=True)
+#
+#     # TODO: Euclidean Clustering
+#     white_cloud = XYZRGB_to_XYZ(cloud_objects)
+#     tree = white_cloud.make_kdtree()
+#
+#     # TODO: Create Cluster-Mask Point Cloud to visualize each cluster separately
+#     # Create a cluster extraction object
+#     ec = white_cloud.make_EuclideanClusterExtraction()
+#     # Set tolerances for distance threshold
+#     # as well as minimum and maximum cluster size (in points)
+#     # NOTE: These are poor choices of clustering parameters
+#     # Your task is to experiment and find values that work for segmenting objects.
+#     ec.set_ClusterTolerance(0.03)
+#     ec.set_MinClusterSize(100)
+#     ec.set_MaxClusterSize(1500)
+#     # Search the k-d tree for clusters
+#     ec.set_SearchMethod(tree)
+#     # Extract indices for each of the discovered clusters
+#     cluster_indices = ec.Extract()
+#
+#     cluster_color = get_color_list(len(cluster_indices))
+#
+#     color_cluster_point_list = []
+#
+#     for j, indices in enumerate(cluster_indices):
+#         for i, indice in enumerate(indices):
+#             color_cluster_point_list.append([white_cloud[indice][0],
+#                                              white_cloud[indice][1],
+#                                              white_cloud[indice][2],
+#                                              rgb_to_float(cluster_color[j])])
+#
+#     # Create new cloud containing all clusters, each with unique color
+#     cluster_cloud = pcl.PointCloud_PointXYZRGB()
+#     cluster_cloud.from_list(color_cluster_point_list)
+#
+#     # TODO remove in production
+#     filename = 'cluster.pcd'
+#     pcl.save(cluster_cloud, filename)
+#
+#     # TODO: Convert PCL data to ROS messages
+#     # ros_cloud_objects = pcl_to_ros(cloud_objects)
+#     # ros_cloud_objects = pcl_to_ros(cluster_cloud)
+#     # ros_cloud_table = pcl_to_ros(cloud_table)
+#
+#     # TODO: Publish ROS messages
+#     # pcl_objects_pub.publish(ros_cloud_objects)
+#     # pcl_table_pub.publish(ros_cloud_table)
+#
+# # Exercise-3 TODOs: identify the objects
+#
+#     # Classify the clusters! (loop through each detected cluster one at a time)
+#
+#         # Grab the points for the cluster
+#
+#         # Compute the associated feature vector
+#
+#         # Make the prediction
+#
+#         # Publish a label into RViz
+#
+#         # Add the detected object to the list of detected objects.
+#
+#     # Publish the list of detected objects
+#
+#     # Suggested location for where to invoke your pr2_mover() function within pcl_callback()
+#     # Could add some logic to determine whether or not your object detections are robust
+#     # before calling pr2_mover()
+#     # try:
+#     #     pr2_mover(detected_objects_list)
+#     # except rospy.ROSInterruptException:
+#     #     pass
 
 
 if __name__ == '__main__':
