@@ -119,7 +119,8 @@ def pcl_callback(pcl_msg):
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_z.set_filter_field_name(filter_axis)
-    axis_min = .6101
+    # axis_min = .6101
+    axis_min = .6
     axis_max = .9
     passthrough_z.set_filter_limits(axis_min, axis_max)
 
@@ -140,27 +141,33 @@ def pcl_callback(pcl_msg):
     pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
     print("passthrough filtered cloud saved")
 
+    # RANSAC Plane Segmentation
+    seg = cloud_filtered.make_segmenter()
 
-#     # TODO: RANSAC Plane Segmentation
-#     seg = cloud_filtered.make_segmenter()
-#
-#     # Set the model you wish to fit
-#     seg.set_model_type(pcl.SACMODEL_PLANE)
-#     seg.set_method_type(pcl.SAC_RANSAC)
-#
-#     # Max distance for a point to be considered fitting the model
-#     # Experiment with different values for max_distance
-#     # for segmenting the table
-#     max_distance = .01
-#     seg.set_distance_threshold(max_distance)
-#
-#     # Call the segment function to obtain set of inlier indices and model coefficients
-#     inliers, coefficients = seg.segment()
-#
-#     # TODO: Extract inliers and outliers
-#     # Extract inliers
-#     cloud_table = cloud_filtered.extract(inliers, negative=False)
-#     cloud_objects = cloud_filtered.extract(inliers, negative=True)
+    # Set the model you wish to fit
+    seg.set_model_type(pcl.SACMODEL_PLANE)
+    seg.set_method_type(pcl.SAC_RANSAC)
+
+    # Max distance for a point to be considered fitting the model
+    # Experiment with different values for max_distance
+    # for segmenting the table
+    max_distance = .01
+    seg.set_distance_threshold(max_distance)
+
+    # Call the segment function to obtain set of inlier indices and model coefficients
+    inliers, coefficients = seg.segment()
+
+    # Extract inliers and outliers
+    # Extract inliers - models that fit the model (plane)
+    cloud_table = cloud_filtered.extract(inliers, negative=False)
+    # Extract outliers - models that do not fit the model (non-planes)
+    cloud_objects = cloud_filtered.extract(inliers, negative=True)
+
+    pcl.save(cloud_table, OUTPUT_PCD_DIRECTORY + "/cloud_table.pcd")
+    pcl.save(cloud_objects, OUTPUT_PCD_DIRECTORY + "/cloud_objects.pcd")
+    print("RANSAC clouds saved")
+
+
 #
 #     # TODO: Euclidean Clustering
 #     white_cloud = XYZRGB_to_XYZ(cloud_objects)
