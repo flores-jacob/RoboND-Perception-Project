@@ -25,6 +25,11 @@ from pr2_robot.srv import *
 from rospy_message_converter import message_converter
 import yaml
 
+# message creation imports
+from std_msgs.msg import Int32
+from std_msgs.msg import String
+from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Point
 
 DEV_FLAG = 0
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
@@ -215,11 +220,11 @@ def pcl_callback(pcl_msg):
         # Publish a label into RViz
         label_pos = list(white_cloud[pts_list[0]])
         label_pos[2] += .4
-        print(type(make_label))
+        # print(type(make_label))
         print("label", label)
-        print("label pos",label_pos)
+        # print("label pos",label_pos)
         print("index",index)
-        print(make_label(label,label_pos, index))
+        # print(make_label(label,label_pos, index))
         object_markers_pub.publish(make_label(label,label_pos, index))
 
         # Add the detected object to the list of detected objects.
@@ -230,7 +235,84 @@ def pcl_callback(pcl_msg):
 
     # Publish the list of detected objects
     rospy.loginfo('Detected {} objects: {}'.format(len(detected_objects_labels), detected_objects_labels))
-    detected_objects_pub.publish(detected_objects)
+    # detected_objects_pub.publish(detected_objects)
+
+    # yaml publishing code
+    # object_list_param is an ordered list of dicts
+    object_list_param = rospy.get_param('/object_list')
+    # object_list_param = [{'group': 'red', 'name': 'sticky_notes'}, {'group': 'red', 'name': 'book'}, {'group': 'green', 'name': 'snacks'}, {'group': 'green', 'name': 'biscuits'}, {'group': 'red', 'name': 'eraser'}, {'group': 'green', 'name': 'soap2'}, {'group': 'green', 'name': 'soap'}, {'group': 'red', 'name': 'glue'}]
+
+    dropbox = rospy.get_param('/dropbox')
+    # dropbox = [{'position': [0, 0.71, 0.605], 'group': 'red', 'name': 'left'}, {'position': [0, -0.71, 0.605], 'group': 'green', 'name': 'right'}]
+
+
+    labels = []
+    centroids = []  # to be list of tuples (x, y, z)
+
+    dict_list = []
+    for i in range(len(object_list_param)):
+        object_name = object_list_param[i]['name']
+        object_group = object_list_param[i]['group']
+
+        for object in detected_objects:
+            if object.label == object_name:
+                labels.append(object.label)
+                points_arr = ros_to_pcl(object.cloud).to_array()
+
+                computed_centroid = np.mean(points_arr, axis=0)[:3]
+
+                centroids.append(computed_centroid)
+
+                test_scene_num = Int32()
+                test_scene_num.data = 3
+
+                # Initialize a variable
+                object_name = String()
+                # Populate the data field
+                object_name.data = str(object.label)
+
+
+                # prepare pick_pose
+                position = Point()
+                position.x = float(computed_centroid[0])
+                position.y = float(computed_centroid[1])
+                position.z = float(computed_centroid[2])
+
+                pick_pose = Pose()
+                pick_pose.position = position
+
+                # prepare place_pose and arm_name
+                place_pose = Pose()
+                arm_name = String()
+                if object_group == dropbox[0]['group']:
+                    place_position = Point()
+
+                    place_position.x = dropbox[0]['position'][0]
+                    place_position.y = dropbox[0]['position'][1]
+                    place_position.z = dropbox[0]['position'][2]
+
+                    place_pose.position = place_position
+
+                    arm_name.data = dropbox[0]['name']
+                elif object_group == dropbox[1]['group']:
+                    place_position = Point()
+
+                    place_position.x = dropbox[1]['position'][0]
+                    place_position.y = dropbox[1]['position'][1]
+                    place_position.z = dropbox[1]['position'][2]
+
+                    place_pose.position = place_position
+                    arm_name.data = dropbox[1]['name']
+                else:
+                    raise "object is not categorized"
+
+                created_yaml = make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose)
+                dict_list.append(created_yaml)
+                continue
+
+    send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
+    print("yaml messages generated and saved to output_" + test_scene_num.data + ".yaml")
+
 
     # Suggested location for where to invoke your pr2_mover() function within pcl_callback()
     # Could add some logic to determine whether or not your object detections are robust
