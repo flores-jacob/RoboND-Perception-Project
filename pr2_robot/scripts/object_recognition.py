@@ -259,7 +259,7 @@ if __name__ == '__main__':
     get_color_list.color_list = []
 
     # Load Model From disk
-    model = pickle.load(open('model3.sav', 'rb'))
+    model = pickle.load(open('object_recognition_models/model4.sav', 'rb'))
     clf = model['classifier']
     encoder = LabelEncoder()
     encoder.classes_ = model['classes']
