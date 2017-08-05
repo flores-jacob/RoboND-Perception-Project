@@ -311,7 +311,7 @@ def pcl_callback(pcl_msg):
                 continue
 
     send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
-    print("yaml messages generated and saved to output_" + test_scene_num.data + ".yaml")
+    print("yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
 
 
     # Suggested location for where to invoke your pr2_mover() function within pcl_callback()
