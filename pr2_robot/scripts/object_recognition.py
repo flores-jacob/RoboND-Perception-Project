@@ -3,6 +3,7 @@
 # Import modules
 import numpy as np
 import sklearn
+import time
 from sklearn.preprocessing import LabelEncoder
 import pickle
 from sensor_stick.srv import GetNormals
@@ -235,7 +236,13 @@ def pcl_callback(pcl_msg):
 
     # Publish the list of detected objects
     rospy.loginfo('Detected {} objects: {}'.format(len(detected_objects_labels), detected_objects_labels))
-    # detected_objects_pub.publish(detected_objects)
+    # try:
+    #     for detected_object in detected_objects:
+    #         detected_objects_pub.publish(detected_object)
+    #     #collidable_objects_pub.publish(ros_cloud_objects)
+    # except Exception as e:
+    #     with open('myexception.txt', "w") as exceptionfile:
+    #         exceptionfile.writelines(str(e))
 
     # yaml publishing code
     # object_list_param is an ordered list of dicts
@@ -306,8 +313,8 @@ def pcl_callback(pcl_msg):
                 else:
                     raise "object is not categorized"
 
-                created_yaml = make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose)
-                dict_list.append(created_yaml)
+                object_properties_dict = make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose)
+                dict_list.append(object_properties_dict)
                 continue
 
     send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
@@ -322,6 +329,15 @@ def pcl_callback(pcl_msg):
     # except rospy.ROSInterruptException:
     #     pass
 
+    # publish table to /pr2/3D_map/points to declare it as collidable
+    collidable_objects_pub.publish(ros_cloud_table)
+
+    for i in range(len(detected_objects)):
+        # publish all items after it as collidable
+        for j in range(min(i + 1, len(detected_objects)), len(detected_objects)):
+            collidable_objects_pub.publish(detected_objects[j].cloud)
+        # afterwhich grasp the object
+        time.sleep(60)
 
 if __name__ == '__main__':
     # TODO: ROS node initialization
@@ -336,6 +352,10 @@ if __name__ == '__main__':
 
     object_markers_pub = rospy.Publisher("/object_markers", Marker, queue_size=1)
     detected_objects_pub = rospy.Publisher("/detected_objects", PointCloud2, queue_size=1)
+
+    # colldable object publisher
+    collidable_objects_pub = rospy.Publisher("/pr2/3D_map/points", PointCloud2, queue_size=1)
+
 
     # Initialize color_list
     get_color_list.color_list = []
