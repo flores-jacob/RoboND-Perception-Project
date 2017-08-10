@@ -130,13 +130,13 @@ def pcl_callback(pcl_msg):
     passthrough_x = cloud_filtered.make_passthrough_filter()
 
     # Assign axis and range to the passthrough filter object.
-    filter_axis = 'x'
-    passthrough_x.set_filter_field_name(filter_axis)
-    axis_min = .33
-    axis_max = .95
-    passthrough_x.set_filter_limits(axis_min, axis_max)
-
-    cloud_filtered = passthrough_x.filter()
+    # filter_axis = 'x'
+    # passthrough_x.set_filter_field_name(filter_axis)
+    # axis_min = .33
+    # axis_max = .95
+    # passthrough_x.set_filter_limits(axis_min, axis_max)
+    #
+    # cloud_filtered = passthrough_x.filter()
 
     pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
     print("passthrough filtered cloud saved")
@@ -194,7 +194,7 @@ def pcl_callback(pcl_msg):
     # Your task is to experiment and find values that work for segmenting objects.
     ec.set_ClusterTolerance(0.015)
     ec.set_MinClusterSize(150)
-    ec.set_MaxClusterSize(6000)
+    ec.set_MaxClusterSize(50000)
     # Search the k-d tree for clusters
     ec.set_SearchMethod(tree)
     # Extract indices for each of the discovered clusters
@@ -281,7 +281,7 @@ def pcl_callback(pcl_msg):
 
 
 if __name__ == '__main__':
-    cloud = pcl.load_XYZRGB('sample_pcd_files/3_objects.pcd')
+    cloud = pcl.load_XYZRGB('sample_pcd_files/with_dropbox_right2.pcd')
 
     get_color_list.color_list = []
 

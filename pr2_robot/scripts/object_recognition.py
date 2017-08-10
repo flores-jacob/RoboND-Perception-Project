@@ -32,23 +32,32 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Point
 
+# imports for arm movement
+from sensor_msgs.msg import JointState
+
 DEV_FLAG = 0
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
+
+# initialize deposit box variables
+right_depositbox_cloud = None
+left_depositbox_cloud = None
 
 # Helper function to get surface normals
 def get_normals(cloud):
     get_normals_prox = rospy.ServiceProxy('/feature_extractor/get_normals', GetNormals)
     return get_normals_prox(cloud).cluster
 
+
 # Helper function to create a yaml friendly dictionary from ROS messages
 def make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose):
     yaml_dict = {}
     yaml_dict["test_scene_num"] = test_scene_num.data
-    yaml_dict["arm_name"]  = arm_name.data
+    yaml_dict["arm_name"] = arm_name.data
     yaml_dict["object_name"] = object_name.data
     yaml_dict["pick_pose"] = message_converter.convert_ros_message_to_dictionary(pick_pose)
     yaml_dict["place_pose"] = message_converter.convert_ros_message_to_dictionary(place_pose)
     return yaml_dict
+
 
 # Helper function to output to yaml file
 def send_to_yaml(yaml_filename, dict_list):
@@ -56,8 +65,33 @@ def send_to_yaml(yaml_filename, dict_list):
     with open(yaml_filename, 'w') as outfile:
         yaml.dump(data_dict, outfile, default_flow_style=False)
 
+
+def world_joint_at_goal(goal_j1):
+    joint_states = rospy.wait_for_message('/pr2/joint_states', JointState)
+    # the last joint state is the world_joint
+    world_joint_pos = joint_states.position[-1]
+    tolerance = .05
+    result = abs(world_joint_pos - goal_j1) <= abs(tolerance)
+    return result
+
+
+def move_world_joint(goal_j1):
+    world_joint_controller_pub.publish(goal_j1)
+    move_complete = False
+
+    while True:
+        # print "pr2/joint_states", world_joint_state
+        if world_joint_at_goal(goal_j1):
+            # time_elapsed = world_joint_state.header.stamp - time_elapsed
+            print("move complete to " + str(goal_j1) + " complete")
+            move_complete = True
+            break
+
+    return move_complete
+
+
 # Callback function for your Point Cloud Subscriber
-def pcl_callback(pcl_msg):
+def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_depositbox_cloud = left_depositbox_cloud):
     # Exercise-2 TODOs: segment and cluster the objects
 
     if DEV_FLAG == 1:
@@ -93,21 +127,19 @@ def pcl_callback(pcl_msg):
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered = passthrough_z.filter()
 
-    passthrough_x = cloud_filtered.make_passthrough_filter()
+    # passthrough_x = cloud_filtered.make_passthrough_filter()
 
     # Assign axis and range to the passthrough filter object.
-    filter_axis = 'x'
-    passthrough_x.set_filter_field_name(filter_axis)
-    axis_min = .33
-    axis_max = .95
-    passthrough_x.set_filter_limits(axis_min, axis_max)
-
-    cloud_filtered = passthrough_x.filter()
+    # filter_axis = 'x'
+    # passthrough_x.set_filter_field_name(filter_axis)
+    # axis_min = .33
+    # axis_max = .95
+    # passthrough_x.set_filter_limits(axis_min, axis_max)
+    #
+    # cloud_filtered = passthrough_x.filter()
 
     # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
     print("passthrough filtered cloud saved")
-
-
 
     # remove noise from the sample
     outlier_filter = cloud_filtered.make_statistical_outlier_filter()
@@ -121,7 +153,6 @@ def pcl_callback(pcl_msg):
     # Finally call the filter function for magic
     cloud_filtered = outlier_filter.filter()
     print "noise reduced"
-
 
     # RANSAC Plane Segmentation
     seg = cloud_filtered.make_segmenter()
@@ -162,7 +193,7 @@ def pcl_callback(pcl_msg):
     # Your task is to experiment and find values that work for segmenting objects.
     ec.set_ClusterTolerance(0.015)
     ec.set_MinClusterSize(150)
-    ec.set_MaxClusterSize(6000)
+    ec.set_MaxClusterSize(50000)
     # Search the k-d tree for clusters
     ec.set_SearchMethod(tree)
     # Extract indices for each of the discovered clusters
@@ -193,7 +224,7 @@ def pcl_callback(pcl_msg):
     pcl_objects_pub.publish(ros_cloud_objects)
     pcl_table_pub.publish(ros_cloud_table)
 
-# Exercise-3 TODOs: identify the objects
+    # Exercise-3 TODOs: identify the objects
 
     detected_objects_labels = []
     detected_objects = []
@@ -214,7 +245,7 @@ def pcl_callback(pcl_msg):
         # Make the prediction, retrieve the label for the result
         # and add it to detected_objects_labels list
 
-        prediction = clf.predict(scaler.transform(feature.reshape(1,-1)))
+        prediction = clf.predict(scaler.transform(feature.reshape(1, -1)))
         label = encoder.inverse_transform(prediction)[0]
         detected_objects_labels.append(label)
 
@@ -224,9 +255,9 @@ def pcl_callback(pcl_msg):
         # print(type(make_label))
         print("label", label)
         # print("label pos",label_pos)
-        print("index",index)
+        print("index", index)
         # print(make_label(label,label_pos, index))
-        object_markers_pub.publish(make_label(label,label_pos, index))
+        object_markers_pub.publish(make_label(label, label_pos, index))
 
         # Add the detected object to the list of detected objects.
         do = DetectedObject()
@@ -271,13 +302,12 @@ def pcl_callback(pcl_msg):
                 centroids.append(computed_centroid)
 
                 test_scene_num = Int32()
-                test_scene_num.data = 3
+                test_scene_num.data = 2
 
                 # Initialize a variable
                 object_name = String()
                 # Populate the data field
                 object_name.data = str(object.label)
-
 
                 # prepare pick_pose
                 position = Point()
@@ -320,7 +350,6 @@ def pcl_callback(pcl_msg):
     send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
     print("yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
 
-
     # Suggested location for where to invoke your pr2_mover() function within pcl_callback()
     # Could add some logic to determine whether or not your object detections are robust
     # before calling pr2_mover()
@@ -332,12 +361,66 @@ def pcl_callback(pcl_msg):
     # publish table to /pr2/3D_map/points to declare it as collidable
     collidable_objects_pub.publish(ros_cloud_table)
 
-    for i in range(len(detected_objects)):
-        # publish all items after it as collidable
-        for j in range(min(i + 1, len(detected_objects)), len(detected_objects)):
-            collidable_objects_pub.publish(detected_objects[j].cloud)
-        # afterwhich grasp the object
-        time.sleep(60)
+    # twist to the left, detect objects, locate dropbox, save dropbox cloud as collidable
+    # twist to the right, detect objects, locate dropbox, save dropbox cloud as collidable
+    # return to zero orientation
+    #if (right_deposit_box_cloud is None) and (left_deposit_box_cloud is None):
+    if (right_depositbox_cloud is None) and world_joint_at_goal(-np.math.pi/2):
+        # twist to the right
+        # move_world_joint(-np.math.pi/2)
+        # detect the dropbox while facing right
+        for detected_object in detected_objects:
+            # if the dropbox is present, assign its point cloud
+            if detected_object.label == 'dropbox':
+                right_depositbox_cloud = detected_object.cloud
+
+
+    if (left_depositbox_cloud is None) and world_joint_at_goal(np.math.pi/2):
+        # twist to the left
+        # move_world_joint(np.math.pi/2)
+        # detect the dropbox while facing left
+        for detected_object in detected_objects:
+            if detected_object.label == 'dropbox':
+                left_depositbox_cloud = detected_object.cloud
+
+        # twist back to the original position
+        move_world_joint(0)
+
+    # publish the depostibox clouds as collidable
+    if right_depositbox_cloud:
+        collidable_objects_pub.publish(right_depositbox_cloud)
+    if left_depositbox_cloud:
+        collidable_objects_pub.publish(left_depositbox_cloud)
+
+
+    # # look around to detect the two dropboxes
+    # move_list = [np.math.pi/2, -np.math.pi/2, 0]
+    #
+    # for move in move_list:
+    #     move_world_joint(move)
+
+
+    # TODO go through all detected objects. If it's the one meant to be moved, make it non-collidable, otherwise,
+    # make it collidable
+    for object_item in object_list_param:
+        # publish all other objects as collidable
+        for detected_object in detected_objects:
+            if object_item['name'] == detected_object.label:
+                pass
+            else:
+                collidable_objects_pub.publish(detected_object.cloud)
+
+        # TODO pick up the object
+
+
+    # for i in range(len(detected_objects)):
+    #     # publish all items after it as collidable
+    #     for j in range(min(i + 1, len(detected_objects)), len(detected_objects)):
+    #         collidable_objects_pub.publish(detected_objects[j].cloud)
+    #         # afterwhich grasp the object
+
+    pcl.save(ros_to_pcl(pcl_msg), "new_cloud.pcd")
+
 
 if __name__ == '__main__':
     # TODO: ROS node initialization
@@ -356,16 +439,23 @@ if __name__ == '__main__':
     # colldable object publisher
     collidable_objects_pub = rospy.Publisher("/pr2/3D_map/points", PointCloud2, queue_size=1)
 
+    # world_joint_publisher
+    world_joint_controller_pub = rospy.Publisher("/pr2/world_joint_controller/command", Float64, queue_size=20)
 
     # Initialize color_list
     get_color_list.color_list = []
 
     # Load Model From disk
-    model = pickle.load(open('object_recognition_models/model4.sav', 'rb'))
+    model = pickle.load(open('object_recognition_models/model5.sav', 'rb'))
     clf = model['classifier']
     encoder = LabelEncoder()
     encoder.classes_ = model['classes']
     scaler = model['scaler']
+
+
+    # twist to the left and right
+    move_world_joint(-np.math.pi/2)
+    move_world_joint(np.math.pi/2)
 
     # TODO: Spin while node is not shutdown
     while not rospy.is_shutdown():
