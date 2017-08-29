@@ -125,18 +125,18 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
     passthrough_z.set_filter_limits(axis_min, axis_max)
 
     # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered = passthrough_z.filter()
+    cloud_filtered_z = passthrough_z.filter()
 
-    # passthrough_x = cloud_filtered.make_passthrough_filter()
+    passthrough_x = cloud_filtered_z.make_passthrough_filter()
 
     # Assign axis and range to the passthrough filter object.
-    # filter_axis = 'x'
-    # passthrough_x.set_filter_field_name(filter_axis)
-    # axis_min = .33
-    # axis_max = .95
-    # passthrough_x.set_filter_limits(axis_min, axis_max)
-    #
-    # cloud_filtered = passthrough_x.filter()
+    filter_axis = 'x'
+    passthrough_x.set_filter_field_name(filter_axis)
+    axis_min = .33
+    axis_max = .95
+    passthrough_x.set_filter_limits(axis_min, axis_max)
+
+    cloud_filtered = passthrough_x.filter()
 
     # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
     print("passthrough filtered cloud saved")
@@ -361,6 +361,21 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
     # publish table to /pr2/3D_map/points to declare it as collidable
     collidable_objects_pub.publish(ros_cloud_table)
 
+    # get all objects prior before table
+
+    passthrough__dropbox_x = cloud_filtered.make_passthrough_filter()
+
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'x'
+    passthrough_x.set_filter_field_name(filter_axis)
+    axis_min = .33
+    axis_max = .95
+    passthrough_x.set_filter_limits(axis_min, axis_max)
+
+    cloud_filtered = passthrough_x.filter()
+
+
+
     # twist to the left, detect objects, locate dropbox, save dropbox cloud as collidable
     # twist to the right, detect objects, locate dropbox, save dropbox cloud as collidable
     # return to zero orientation
@@ -411,6 +426,8 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
                 collidable_objects_pub.publish(detected_object.cloud)
 
         # TODO pick up the object
+            # TODO generate the messgage to be sent to the joints
+            # TODO publish the list of messages to the joint
 
 
     # for i in range(len(detected_objects)):

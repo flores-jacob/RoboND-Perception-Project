@@ -125,23 +125,47 @@ def pcl_callback(pcl_msg):
     passthrough_z.set_filter_limits(axis_min, axis_max)
 
     # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered = passthrough_z.filter()
+    cloud_filtered_z = passthrough_z.filter()
 
-    passthrough_x = cloud_filtered.make_passthrough_filter()
+
+    # create filter ot only get area of table with objects
+    passthrough_x = cloud_filtered_z.make_passthrough_filter()
 
     # Assign axis and range to the passthrough filter object.
-    # filter_axis = 'x'
-    # passthrough_x.set_filter_field_name(filter_axis)
-    # axis_min = .33
-    # axis_max = .95
-    # passthrough_x.set_filter_limits(axis_min, axis_max)
-    #
-    # cloud_filtered = passthrough_x.filter()
+    filter_axis = 'x'
+    passthrough_x.set_filter_field_name(filter_axis)
+    axis_min = .34
+    axis_max = .95
+    passthrough_x.set_filter_limits(axis_min, axis_max)
+
+    cloud_filtered = passthrough_x.filter()
 
     pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
     print("passthrough filtered cloud saved")
 
-    # remove noise from the sample
+
+
+
+    # get areas of dropbox
+    passthrough_dropbox_x = cloud_filtered_z.make_passthrough_filter()
+
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'x'
+    passthrough_dropbox_x.set_filter_field_name(filter_axis)
+    axis_min = -1.0
+    axis_max = .339
+    passthrough_dropbox_x.set_filter_limits(axis_min, axis_max)
+
+    cloud_filtered_dropbox = passthrough_dropbox_x.filter()
+
+    pcl.save(cloud_filtered_dropbox, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered_dropbox.pcd")
+    print("passthrough filtered dropbox cloud saved")
+
+
+    # TODO publish the dropbox as obstacles
+
+
+    # Remove noise from the both passthrough fitered areas
     outlier_filter = cloud_filtered.make_statistical_outlier_filter()
 
     # Set the number of neighboring points to analyze for any given point
@@ -150,10 +174,27 @@ def pcl_callback(pcl_msg):
     # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
     outlier_filter.set_std_dev_mul_thresh(0.5)
 
-    # Finally call the filter function for magic
+    # Remove noise from object are
     cloud_filtered = outlier_filter.filter()
     pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/noise_reduced.pcd")
     print ("noise reduced cloud saved")
+
+
+
+    # Remove noise from dropbox area
+    dropbox_filter = cloud_filtered_dropbox.make_statistical_outlier_filter()
+
+    # Set the number of neighboring points to analyze for any given point
+    dropbox_filter.set_mean_k(10)
+
+    # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
+    dropbox_filter.set_std_dev_mul_thresh(0.5)
+
+    dropbox_filtered = dropbox_filter.filter()
+    pcl.save(dropbox_filtered, OUTPUT_PCD_DIRECTORY + "/noise_reduced_dropbox.pcd")
+    print ("noise reduced dropbox cloud saved")
+
+
 
     # RANSAC Plane Segmentation
     seg = cloud_filtered.make_segmenter()
