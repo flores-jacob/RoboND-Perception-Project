@@ -261,7 +261,7 @@
                 <slip2>0</slip2>
               </ode>
               <torsional>
-                <coefficient>1</coefficient>
+                <coefficient>0.5</coefficient>
                 <patch_radius>0</patch_radius>
                 <surface_radius>0</surface_radius>
                 <use_patch_radius>1</use_patch_radius>
@@ -360,7 +360,7 @@
                 <slip2>0</slip2>
               </ode>
               <torsional>
-                <coefficient>1</coefficient>
+                <coefficient>0.5</coefficient>
                 <patch_radius>0</patch_radius>
                 <surface_radius>0</surface_radius>
                 <use_patch_radius>1</use_patch_radius>
@@ -455,7 +455,7 @@
                 <slip2>0</slip2>
               </ode>
               <torsional>
-                <coefficient>1</coefficient>
+                <coefficient>0.5</coefficient>
                 <patch_radius>0</patch_radius>
                 <surface_radius>0</surface_radius>
                 <use_patch_radius>1</use_patch_radius>
@@ -550,7 +550,7 @@
                 <slip2>0</slip2>
               </ode>
               <torsional>
-                <coefficient>1</coefficient>
+                <coefficient>0.5</coefficient>
                 <patch_radius>0</patch_radius>
                 <surface_radius>0</surface_radius>
                 <use_patch_radius>1</use_patch_radius>
@@ -645,7 +645,7 @@
                 <slip2>0</slip2>
               </ode>
               <torsional>
-                <coefficient>1</coefficient>
+                <coefficient>0.5</coefficient>
                 <patch_radius>0</patch_radius>
                 <surface_radius>0</surface_radius>
                 <use_patch_radius>1</use_patch_radius>
