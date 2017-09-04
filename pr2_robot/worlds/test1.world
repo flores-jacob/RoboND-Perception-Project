@@ -241,7 +241,7 @@
                 <slip2>0</slip2>
               </ode>
               <torsional>
-                <coefficient>0.5</coefficient>
+                <coefficient>1.0</coefficient>
                 <patch_radius>0</patch_radius>
                 <surface_radius>0</surface_radius>
                 <use_patch_radius>1</use_patch_radius>
@@ -340,7 +340,7 @@
                 <slip2>0</slip2>
               </ode>
               <torsional>
-                <coefficient>0.5</coefficient>
+                <coefficient>1.0</coefficient>
                 <patch_radius>0</patch_radius>
                 <surface_radius>0</surface_radius>
                 <use_patch_radius>1</use_patch_radius>
@@ -435,7 +435,7 @@
                 <slip2>0</slip2>
               </ode>
               <torsional>
-                <coefficient>0.5</coefficient>
+                <coefficient>1.0</coefficient>
                 <patch_radius>0</patch_radius>
                 <surface_radius>0</surface_radius>
                 <use_patch_radius>1</use_patch_radius>
@@ -530,7 +530,7 @@
                 <slip2>0</slip2>
               </ode>
               <torsional>
-                <coefficient>0.5</coefficient>
+                <coefficient>1.0</coefficient>
                 <patch_radius>0</patch_radius>
                 <surface_radius>0</surface_radius>
                 <use_patch_radius>1</use_patch_radius>
@@ -625,7 +625,7 @@
                 <slip2>0</slip2>
               </ode>
               <torsional>
-                <coefficient>0.5</coefficient>
+                <coefficient>1.0</coefficient>
                 <patch_radius>0</patch_radius>
                 <surface_radius>0</surface_radius>
                 <use_patch_radius>1</use_patch_radius>
@@ -714,7 +714,7 @@
               <torsional>
                 <ode/>
               </torsional>
-              <ode mu="1.0" mu2="1.0" fdir="0 0 1"/>
+              <ode mu="500.0" mu2="500.0" fdir="0 0 1"/>
             </friction>
           </surface>
         </collision>
@@ -769,7 +769,7 @@
               <torsional>
                 <ode/>
               </torsional>
-              <ode mu="1.0" mu2="1.0" fdir="0 0 1"/>
+              <ode mu="500.0" mu2="500.0" fdir="0 0 1"/>
             </friction>
           </surface>
         </collision>
@@ -824,7 +824,7 @@
               <torsional>
                 <ode/>
               </torsional>
-              <ode mu="1.0" mu2="1.0" fdir="0 0 1"/>
+              <ode mu="500.0" mu2="500.0" fdir="0 0 1"/>
             </friction>
           </surface>
         </collision>

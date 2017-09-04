@@ -14,12 +14,12 @@ joint_limits:
     max_acceleration: 0
   left_left_gripper_finger_joint:
     has_velocity_limits: true
-    max_velocity: 0.05
+    max_velocity: 0.1
     has_acceleration_limits: false
     max_acceleration: 0
   left_right_gripper_finger_joint:
     has_velocity_limits: true
-    max_velocity: 0.05
+    max_velocity: 0.1
     has_acceleration_limits: false
     max_acceleration: 0
   left_shoulder_lift_joint:
@@ -59,12 +59,12 @@ joint_limits:
     max_acceleration: 0
   right_left_gripper_finger_joint:
     has_velocity_limits: true
-    max_velocity: 0.05
+    max_velocity: 0.1
     has_acceleration_limits: false
     max_acceleration: 0
   right_right_gripper_finger_joint:
     has_velocity_limits: true
-    max_velocity: 0.05
+    max_velocity: 0.1
     has_acceleration_limits: false
     max_acceleration: 0
   right_shoulder_lift_joint:

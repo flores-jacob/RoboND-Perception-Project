@@ -20,8 +20,8 @@ pr2:
         - right_right_gripper_finger_joint
         - right_left_gripper_finger_joint
       gains:
-        right_right_gripper_finger_joint: {p: 100, i: 1, d: 10, i_clamp: 1.0}
-        right_left_gripper_finger_joint: {p: 100, i: 1, d: 10, i_clamp: 1.0}
+        right_right_gripper_finger_joint: {p: 500, i: 1, d: 10, i_clamp: 1.0}
+        right_left_gripper_finger_joint: {p: 500, i: 1, d: 10, i_clamp: 1.0}
       constraints:
         goal_time: 3.0
         right_right_gripper_finger_joint:
@@ -35,8 +35,8 @@ pr2:
         - left_right_gripper_finger_joint
         - left_left_gripper_finger_joint
       gains:
-        left_right_gripper_finger_joint: {p: 100, i: 1, d: 10, i_clamp: 1.0}
-        left_left_gripper_finger_joint: {p: 100, i: 1, d: 10, i_clamp: 1.0}
+        left_right_gripper_finger_joint: {p: 500, i: 1, d: 10, i_clamp: 1.0}
+        left_left_gripper_finger_joint: {p: 500, i: 1, d: 10, i_clamp: 1.0}
       constraints:
         goal_time: 3.0
         left_right_gripper_finger_joint:
