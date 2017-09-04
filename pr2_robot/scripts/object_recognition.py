@@ -58,6 +58,14 @@ def make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose)
     yaml_dict["place_pose"] = message_converter.convert_ros_message_to_dictionary(place_pose)
     return yaml_dict
 
+def make_object_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose):
+    object_dict = {}
+    object_dict["test_scene_num"] = test_scene_num
+    object_dict["arm_name"] = arm_name
+    object_dict["object_name"] = object_name
+    object_dict["pick_pose"] = pick_pose
+    object_dict["place_pose"] = place_pose
+    return object_dict
 
 # Helper function to output to yaml file
 def send_to_yaml(yaml_filename, dict_list):
@@ -286,8 +294,8 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
 
     labels = []
     centroids = []  # to be list of tuples (x, y, z)
-
     dict_list = []
+    object_dict_items = {}
     for i in range(len(object_list_param)):
         object_name = object_list_param[i]['name']
         object_group = object_list_param[i]['group']
@@ -302,7 +310,7 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
                 centroids.append(computed_centroid)
 
                 test_scene_num = Int32()
-                test_scene_num.data = 2
+                test_scene_num.data = 1
 
                 # Initialize a variable
                 object_name = String()
@@ -343,9 +351,40 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
                 else:
                     raise "object is not categorized"
 
-                object_properties_dict = make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose)
+                object_properties_dict = make_yaml_dict(test_scene_num, arm_name, object_name,
+                                                        pick_pose, place_pose)
                 dict_list.append(object_properties_dict)
+
+                object_dict = make_object_dict(test_scene_num, arm_name, object_name,
+                                                        pick_pose, place_pose)
+                object_dict_items[object_name.data] = object_dict
+
+                rospy.wait_for_service('pick_place_routine')
+
+                try:
+                    pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
+
+                    print "test_scene_num", type(test_scene_num), test_scene_num
+                    print "object_name", type(object_name), object_name
+                    print "arm_name", type(arm_name), arm_name
+                    print "pick_pose", type(pick_pose), pick_pose
+                    print "place_pose", type(place_pose), place_pose
+
+                    #resp = pick_place_routine(object_dict["test_scene_num"], object_dict["object_name"],
+                    #                          object_dict["arm_name"], object_dict["pick_pose"],
+                    #                          object_dict["place_pose"])
+
+                    resp = pick_place_routine(test_scene_num, object_name,
+                                              arm_name, pick_pose,
+                                              place_pose)
+
+                    print ("Response: ", resp.success)
+
+                except rospy.ServiceException, e:
+                    print "Service call failed: %s" % e
+                
                 continue
+
 
     send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
     print("yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
@@ -417,11 +456,13 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
 
     # TODO go through all detected objects. If it's the one meant to be moved, make it non-collidable, otherwise,
     # make it collidable
+
+    object_to_pick = None
     for object_item in object_list_param:
         # publish all other objects as collidable
         for detected_object in detected_objects:
             if object_item['name'] == detected_object.label:
-                pass
+                object_to_pick = object_dict_items[detected_object.label]
             else:
                 collidable_objects_pub.publish(detected_object.cloud)
 
@@ -429,6 +470,21 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
             # TODO generate the messgage to be sent to the joints
             # TODO publish the list of messages to the joint
 
+        if object_to_pick is not None:
+            rospy.wait_for_service('pick_place_routine')
+
+            try:
+                pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
+
+                resp = pick_place_routine(object_to_pick["test_scene_num"], object_to_pick["object_name"], object_to_pick["arm_name"], object_to_pick["pick_pose"],
+                                          object_to_pick["place_pose"])
+
+                print ("Response: ", resp.success)
+
+            except rospy.ServiceException, e:
+                print "Service call failed: %s" % e
+
+            object_to_pick = None
 
     # for i in range(len(detected_objects)):
     #     # publish all items after it as collidable
@@ -471,8 +527,8 @@ if __name__ == '__main__':
 
 
     # twist to the left and right
-    move_world_joint(-np.math.pi/2)
-    move_world_joint(np.math.pi/2)
+    # move_world_joint(-np.math.pi/2)
+    # move_world_joint(np.math.pi/2)
 
     # TODO: Spin while node is not shutdown
     while not rospy.is_shutdown():
