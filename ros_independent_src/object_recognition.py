@@ -113,57 +113,94 @@ def pcl_callback(pcl_msg):
     pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/voxel_downsampled.pcd")
     print("voxel downsampled cloud saved")
 
-    # PassThrough Filter for z axis to remove table
-    passthrough_z = cloud_filtered.make_passthrough_filter()
+    # # PassThrough Filter for z axis to remove table
+    # passthrough_z = cloud_filtered.make_passthrough_filter()
+    #
+    # # Assign axis and range to the passthrough filter object.
+    # filter_axis = 'z'
+    # passthrough_z.set_filter_field_name(filter_axis)
+    # # axis_min = .6101
+    # # .6 for test world .5 or 0 for challenge world
+    # axis_min = 0.0
+    # axis_max = 1.0
+    # passthrough_z.set_filter_limits(axis_min, axis_max)
+    #
+    # # Finally use the filter function to obtain the resultant point cloud.
+    # cloud_filtered_z = passthrough_z.filter()
 
+    # passthrough filter ranges to remove tables
+    # bottom area 0 - 0.45
+    # middle area 0.55(left side) 0.551 (right side) - 0.775
+    # top area 0.825 (left side) 0.8251 (right side) - 1.0
+
+    passthrough_filter_bottom = cloud_filtered.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
-    passthrough_z.set_filter_field_name(filter_axis)
-    # axis_min = .6101
-    axis_min = .6
-    axis_max = .9
-    passthrough_z.set_filter_limits(axis_min, axis_max)
+    passthrough_filter_bottom.set_filter_field_name(filter_axis)
+    # bottom_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    bottom_axis_min = 0.0
+    bottom_axis_max = 0.45
+    passthrough_filter_bottom.set_filter_limits(bottom_axis_min, bottom_axis_max)
 
     # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_z = passthrough_z.filter()
+    cloud_filtered_z_bottom = passthrough_filter_bottom.filter()
 
-
-    # create filter ot only get area of table with objects
-    passthrough_x = cloud_filtered_z.make_passthrough_filter()
-
+    passthrough_filter_middle = cloud_filtered.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
-    filter_axis = 'x'
-    passthrough_x.set_filter_field_name(filter_axis)
-    axis_min = .34
-    axis_max = .95
-    passthrough_x.set_filter_limits(axis_min, axis_max)
+    filter_axis = 'z'
+    passthrough_filter_middle.set_filter_field_name(filter_axis)
+    # middle_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    middle_axis_min = 0.551
+    middle_axis_max = 0.775
+    passthrough_filter_middle.set_filter_limits(middle_axis_min, middle_axis_max)
 
-    cloud_filtered = passthrough_x.filter()
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_middle = passthrough_filter_middle.filter()
+
+    passthrough_filter_top = cloud_filtered.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_filter_top.set_filter_field_name(filter_axis)
+    # top_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    top_axis_min = 0.8251
+    top_axis_max = 1.0
+    passthrough_filter_top.set_filter_limits(top_axis_min, top_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_top = passthrough_filter_top.filter()
+
+    # convert to arrays,then to lists, to enable combination later on
+
+    cloud_filtered_z_bottom_list = cloud_filtered_z_bottom.to_array().tolist()
+    cloud_filtered_z_middle_list = cloud_filtered_z_middle.to_array().tolist()
+    cloud_filtered_z_top_list = cloud_filtered_z_top.to_array().tolist()
+
+    combined_passthrough_filtered_list = cloud_filtered_z_bottom_list + cloud_filtered_z_middle_list + cloud_filtered_z_top_list
+
+    cloud_filtered = pcl.PointCloud_PointXYZRGB()
+    cloud_filtered.from_list(combined_passthrough_filtered_list)
 
     pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
     print("passthrough filtered cloud saved")
 
-
-
-
-    # get areas of dropbox
-    passthrough_dropbox_x = cloud_filtered_z.make_passthrough_filter()
-
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'x'
-    passthrough_dropbox_x.set_filter_field_name(filter_axis)
-    axis_min = -1.0
-    axis_max = .339
-    passthrough_dropbox_x.set_filter_limits(axis_min, axis_max)
-
-    cloud_filtered_dropbox = passthrough_dropbox_x.filter()
-
-    pcl.save(cloud_filtered_dropbox, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered_dropbox.pcd")
-    print("passthrough filtered dropbox cloud saved")
-
-
-    # TODO publish the dropbox as obstacles
-
+    #
+    # # get areas of dropbox
+    # passthrough_dropbox_x = cloud_filtered_z.make_passthrough_filter()
+    #
+    # # Assign axis and range to the passthrough filter object.
+    # filter_axis = 'x'
+    # passthrough_dropbox_x.set_filter_field_name(filter_axis)
+    # axis_min = -1.0
+    # axis_max = .339
+    # passthrough_dropbox_x.set_filter_limits(axis_min, axis_max)
+    #
+    # cloud_filtered_dropbox = passthrough_dropbox_x.filter()
+    #
+    # pcl.save(cloud_filtered_dropbox, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered_dropbox.pcd")
+    # print("passthrough filtered dropbox cloud saved")
 
     # Remove noise from the both passthrough fitered areas
     outlier_filter = cloud_filtered.make_statistical_outlier_filter()
@@ -179,20 +216,18 @@ def pcl_callback(pcl_msg):
     pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/noise_reduced.pcd")
     print ("noise reduced cloud saved")
 
-
-
-    # Remove noise from dropbox area
-    dropbox_filter = cloud_filtered_dropbox.make_statistical_outlier_filter()
-
-    # Set the number of neighboring points to analyze for any given point
-    dropbox_filter.set_mean_k(10)
-
-    # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
-    dropbox_filter.set_std_dev_mul_thresh(0.5)
-
-    dropbox_filtered = dropbox_filter.filter()
-    pcl.save(dropbox_filtered, OUTPUT_PCD_DIRECTORY + "/noise_reduced_dropbox.pcd")
-    print ("noise reduced dropbox cloud saved")
+    # # Remove noise from dropbox area
+    # dropbox_filter = cloud_filtered_dropbox.make_statistical_outlier_filter()
+    #
+    # # Set the number of neighboring points to analyze for any given point
+    # dropbox_filter.set_mean_k(10)
+    #
+    # # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
+    # dropbox_filter.set_std_dev_mul_thresh(0.5)
+    #
+    # dropbox_filtered = dropbox_filter.filter()
+    # pcl.save(dropbox_filtered, OUTPUT_PCD_DIRECTORY + "/noise_reduced_dropbox.pcd")
+    # print ("noise reduced dropbox cloud saved")
 
 
 
@@ -267,7 +302,7 @@ def pcl_callback(pcl_msg):
     # pcl_objects_pub.publish(ros_cloud_objects)
     # pcl_table_pub.publish(ros_cloud_table)
 
-# Exercise-3 TODOs: identify the objects
+    # Exercise-3 TODOs: identify the objects
 
     # detected_objects_labels = []
     # detected_objects = []
@@ -279,50 +314,50 @@ def pcl_callback(pcl_msg):
         # ros_cluster = pcl_to_ros(pcl_cluster)
         if index == 0:
             pcl.save(pcl_cluster, OUTPUT_PCD_DIRECTORY + "/sample_cluster.pcd")
-    #
-    #     # Extract histogram features
-    #     # TODO: complete this step just as you did before in capture_features.py
-    #     chists = compute_color_histograms(ros_cluster, using_hsv=True)
-    #     normals = get_normals(ros_cluster)
-    #     nhists = compute_normal_histograms(normals)
-    #     feature = np.concatenate((chists, nhists))
-    #
-    #     # Make the prediction, retrieve the label for the result
-    #     # and add it to detected_objects_labels list
-    #
-    #     prediction = clf.predict(scaler.transform(feature.reshape(1,-1)))
-    #     label = encoder.inverse_transform(prediction)[0]
-    #     detected_objects_labels.append(label)
-    #
-    #     # Publish a label into RViz
-    #     label_pos = list(white_cloud[pts_list[0]])
-    #     label_pos[2] += .4
-    #     print(type(make_label))
-    #     print("label", label)
-    #     print("label pos",label_pos)
-    #     print("index",index)
-    #     print(make_label(label,label_pos, index))
-    #     object_markers_pub.publish(make_label(label,label_pos, index))
-    #
-    #     # Add the detected object to the list of detected objects.
-    #     do = DetectedObject()
-    #     do.label = label
-    #     do.cloud = ros_cluster
-    #     detected_objects.append(do)
+            #
+            #     # Extract histogram features
+            #     # TODO: complete this step just as you did before in capture_features.py
+            #     chists = compute_color_histograms(ros_cluster, using_hsv=True)
+            #     normals = get_normals(ros_cluster)
+            #     nhists = compute_normal_histograms(normals)
+            #     feature = np.concatenate((chists, nhists))
+            #
+            #     # Make the prediction, retrieve the label for the result
+            #     # and add it to detected_objects_labels list
+            #
+            #     prediction = clf.predict(scaler.transform(feature.reshape(1,-1)))
+            #     label = encoder.inverse_transform(prediction)[0]
+            #     detected_objects_labels.append(label)
+            #
+            #     # Publish a label into RViz
+            #     label_pos = list(white_cloud[pts_list[0]])
+            #     label_pos[2] += .4
+            #     print(type(make_label))
+            #     print("label", label)
+            #     print("label pos",label_pos)
+            #     print("index",index)
+            #     print(make_label(label,label_pos, index))
+            #     object_markers_pub.publish(make_label(label,label_pos, index))
+            #
+            #     # Add the detected object to the list of detected objects.
+            #     do = DetectedObject()
+            #     do.label = label
+            #     do.cloud = ros_cluster
+            #     detected_objects.append(do)
 
-    # Publish the list of detected objects
+            # Publish the list of detected objects
 
-    # Suggested location for where to invoke your pr2_mover() function within pcl_callback()
-    # Could add some logic to determine whether or not your object detections are robust
-    # before calling pr2_mover()
-    # try:
-    #     pr2_mover(detected_objects_list)
-    # except rospy.ROSInterruptException:
-    #     pass
+            # Suggested location for where to invoke your pr2_mover() function within pcl_callback()
+            # Could add some logic to determine whether or not your object detections are robust
+            # before calling pr2_mover()
+            # try:
+            #     pr2_mover(detected_objects_list)
+            # except rospy.ROSInterruptException:
+            #     pass
 
 
 if __name__ == '__main__':
-    cloud = pcl.load_XYZRGB('sample_pcd_files/with_dropbox_right2.pcd')
+    cloud = pcl.load_XYZRGB('sample_pcd_files/right_cloud.pcd')
 
     get_color_list.color_list = []
 
