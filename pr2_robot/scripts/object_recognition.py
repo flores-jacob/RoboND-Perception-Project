@@ -307,6 +307,12 @@ def pcl_callback(pcl_msg):
     centroids = []  # to be list of tuples (x, y, z)
     dict_list = []
     object_dict_items = {}
+
+    first_dropbox_group_count = 0
+    second_dropbox_group_count = 0
+
+    place_position_coefficient = .025
+
     for i in range(len(object_list_param)):
         object_name = object_list_param[i]['name']
         object_group = object_list_param[i]['group']
@@ -341,9 +347,11 @@ def pcl_callback(pcl_msg):
                 place_pose = Pose()
                 arm_name = String()
                 if object_group == dropbox[0]['group']:
+                    first_dropbox_group_count += 1
+
                     place_position = Point()
 
-                    place_position.x = dropbox[0]['position'][0]
+                    place_position.x = dropbox[0]['position'][0] - (first_dropbox_group_count * place_position_coefficient)
                     place_position.y = dropbox[0]['position'][1]
                     place_position.z = dropbox[0]['position'][2]
 
@@ -351,13 +359,16 @@ def pcl_callback(pcl_msg):
 
                     arm_name.data = dropbox[0]['name']
                 elif object_group == dropbox[1]['group']:
+                    second_dropbox_group_count += 1
+
                     place_position = Point()
 
-                    place_position.x = dropbox[1]['position'][0]
+                    place_position.x = dropbox[1]['position'][0] - (second_dropbox_group_count * place_position_coefficient)
                     place_position.y = dropbox[1]['position'][1]
                     place_position.z = dropbox[1]['position'][2]
 
                     place_pose.position = place_position
+
                     arm_name.data = dropbox[1]['name']
                 else:
                     raise "object is not categorized"
@@ -463,6 +474,9 @@ def pcl_callback(pcl_msg):
     #     move_world_joint(move)
 
 
+    # publish table to /pr2/3D_map/points to declare it as collidable
+    collidable_objects_pub.publish(ros_cloud_table)
+
     # TODO go through all detected objects. If it's the one meant to be moved, make it non-collidable, otherwise,
     # make it collidable
 
@@ -475,18 +489,15 @@ def pcl_callback(pcl_msg):
         # clear_octomap = rospy.ServiceProxy('clear_octomap', ClearOctomap)
         # clear_octomap()
 
-        # publish table to /pr2/3D_map/points to declare it as collidable
-        collidable_objects_pub.publish(ros_cloud_table)
-
         print("looping to assign collision")
         # publish all other objects as collidable
         for detected_object in detected_objects:
-            print("looping through each detected_object in detected objects to make collidable or not")
+            #print("looping through each detected_object in detected objects to make collidable or not")
             if object_item['name'] == detected_object.label:
                 print("assigning " + detected_object.label + " as pickable and non collidable")
                 object_to_pick = object_dict_items[detected_object.label]
             else:
-                print("assigning " + detected_object.label + " as collidable")
+                print("collidable " + detected_object.label)
                 collidable_objects_pub.publish(detected_object.cloud)
         print("colision assignment done")
         # TODO pick up the object
