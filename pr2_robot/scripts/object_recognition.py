@@ -42,6 +42,10 @@ OUTPUT_PCD_DIRECTORY = "output_pcd_files"
 right_depositbox_cloud = None
 left_depositbox_cloud = None
 
+# initialize variable keeping track of twisting status
+right_twist_done = False
+left_twist_done = False
+
 # Helper function to get surface normals
 def get_normals(cloud):
     get_normals_prox = rospy.ServiceProxy('/feature_extractor/get_normals', GetNormals)
@@ -84,22 +88,27 @@ def world_joint_at_goal(goal_j1):
 
 
 def move_world_joint(goal_j1):
-    world_joint_controller_pub.publish(goal_j1)
     move_complete = False
 
-    while True:
+    while move_complete is False:
         # print "pr2/joint_states", world_joint_state
+        # print("entering while loop")
+        # print("publishing to move joint")
+        world_joint_controller_pub.publish(goal_j1)
+        # print("published to joint")
+
         if world_joint_at_goal(goal_j1):
             # time_elapsed = world_joint_state.header.stamp - time_elapsed
             print("move complete to " + str(goal_j1) + " complete")
             move_complete = True
-            break
+
+    # print("done moving joint")
 
     return move_complete
 
 
 # Callback function for your Point Cloud Subscriber
-def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_depositbox_cloud = left_depositbox_cloud):
+def pcl_callback(pcl_msg):
     # Exercise-2 TODOs: segment and cluster the objects
 
     if DEV_FLAG == 1:
@@ -135,16 +144,18 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z = passthrough_z.filter()
 
-    passthrough_x = cloud_filtered_z.make_passthrough_filter()
+    # passthrough_x = cloud_filtered_z.make_passthrough_filter()
+    #
+    # # Assign axis and range to the passthrough filter object.
+    # filter_axis = 'x'
+    # passthrough_x.set_filter_field_name(filter_axis)
+    # axis_min = .33
+    # axis_max = .95
+    # passthrough_x.set_filter_limits(axis_min, axis_max)
+    #
+    # cloud_filtered = passthrough_x.filter()
 
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'x'
-    passthrough_x.set_filter_field_name(filter_axis)
-    axis_min = .33
-    axis_max = .95
-    passthrough_x.set_filter_limits(axis_min, axis_max)
-
-    cloud_filtered = passthrough_x.filter()
+    cloud_filtered = cloud_filtered_z
 
     # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
     print("passthrough filtered cloud saved")
@@ -310,7 +321,7 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
                 centroids.append(computed_centroid)
 
                 test_scene_num = Int32()
-                test_scene_num.data = 1
+                test_scene_num.data = 3
 
                 # Initialize a variable
                 object_name = String()
@@ -359,35 +370,36 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
                                                         pick_pose, place_pose)
                 object_dict_items[object_name.data] = object_dict
 
-                rospy.wait_for_service('pick_place_routine')
-
-                try:
-                    pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
-
-                    print "test_scene_num", type(test_scene_num), test_scene_num
-                    print "object_name", type(object_name), object_name
-                    print "arm_name", type(arm_name), arm_name
-                    print "pick_pose", type(pick_pose), pick_pose
-                    print "place_pose", type(place_pose), place_pose
-
-                    #resp = pick_place_routine(object_dict["test_scene_num"], object_dict["object_name"],
-                    #                          object_dict["arm_name"], object_dict["pick_pose"],
-                    #                          object_dict["place_pose"])
-
-                    resp = pick_place_routine(test_scene_num, object_name,
-                                              arm_name, pick_pose,
-                                              place_pose)
-
-                    print ("Response: ", resp.success)
-
-                except rospy.ServiceException, e:
-                    print "Service call failed: %s" % e
+                # rospy.wait_for_service('pick_place_routine')
+                #
+                # try:
+                #     pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
+                #
+                #     print "test_scene_num", type(test_scene_num), test_scene_num
+                #     print "object_name", type(object_name), object_name
+                #     print "arm_name", type(arm_name), arm_name
+                #     print "pick_pose", type(pick_pose), pick_pose
+                #     print "place_pose", type(place_pose), place_pose
+                #
+                #     #resp = pick_place_routine(object_dict["test_scene_num"], object_dict["object_name"],
+                #     #                          object_dict["arm_name"], object_dict["pick_pose"],
+                #     #                          object_dict["place_pose"])
+                #
+                #     resp = pick_place_routine(test_scene_num, object_name,
+                #                               arm_name, pick_pose,
+                #                               place_pose)
+                #
+                #     print ("Response: ", resp.success)
+                #
+                # except rospy.ServiceException, e:
+                #     print "Service call failed: %s" % e
                 
                 continue
 
-
-    send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
-    print("yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
+    # If items from the pick_list is present, generate the yaml file
+    if dict_list:
+        send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
+        print("yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
 
     # Suggested location for where to invoke your pr2_mover() function within pcl_callback()
     # Could add some logic to determine whether or not your object detections are robust
@@ -397,57 +409,54 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
     # except rospy.ROSInterruptException:
     #     pass
 
-    # publish table to /pr2/3D_map/points to declare it as collidable
-    collidable_objects_pub.publish(ros_cloud_table)
-
     # get all objects prior before table
 
-    passthrough__dropbox_x = cloud_filtered.make_passthrough_filter()
-
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'x'
-    passthrough_x.set_filter_field_name(filter_axis)
-    axis_min = .33
-    axis_max = .95
-    passthrough_x.set_filter_limits(axis_min, axis_max)
-
-    cloud_filtered = passthrough_x.filter()
-
-
-
-    # twist to the left, detect objects, locate dropbox, save dropbox cloud as collidable
-    # twist to the right, detect objects, locate dropbox, save dropbox cloud as collidable
-    # return to zero orientation
-    #if (right_deposit_box_cloud is None) and (left_deposit_box_cloud is None):
-    if (right_depositbox_cloud is None) and world_joint_at_goal(-np.math.pi/2):
-        # twist to the right
-        # move_world_joint(-np.math.pi/2)
-        # detect the dropbox while facing right
-        for detected_object in detected_objects:
-            # if the dropbox is present, assign its point cloud
-            if detected_object.label == 'dropbox':
-                right_depositbox_cloud = detected_object.cloud
+    # passthrough__dropbox_x = cloud_filtered.make_passthrough_filter()
+    #
+    # # Assign axis and range to the passthrough filter object.
+    # filter_axis = 'x'
+    # passthrough_x.set_filter_field_name(filter_axis)
+    # axis_min = .33
+    # axis_max = .95
+    # passthrough_x.set_filter_limits(axis_min, axis_max)
+    #
+    # cloud_filtered = passthrough_x.filter()
 
 
-    if (left_depositbox_cloud is None) and world_joint_at_goal(np.math.pi/2):
-        # twist to the left
-        # move_world_joint(np.math.pi/2)
-        # detect the dropbox while facing left
-        for detected_object in detected_objects:
-            if detected_object.label == 'dropbox':
-                left_depositbox_cloud = detected_object.cloud
 
-        # twist back to the original position
-        move_world_joint(0)
+    # # twist to the left, detect objects, locate dropbox, save dropbox cloud as collidable
+    # # twist to the right, detect objects, locate dropbox, save dropbox cloud as collidable
+    # # return to zero orientation
+    # #if (right_deposit_box_cloud is None) and (left_deposit_box_cloud is None):
+    # if (right_depositbox_cloud is None) and world_joint_at_goal(-np.math.pi/2):
+    #     # twist to the right
+    #     # move_world_joint(-np.math.pi/2)
+    #     # detect the dropbox while facing right
+    #     for detected_object in detected_objects:
+    #         # if the dropbox is present, assign its point cloud
+    #         if detected_object.label == 'dropbox':
+    #             right_depositbox_cloud = detected_object.cloud
+    #
+    #
+    # if (left_depositbox_cloud is None) and world_joint_at_goal(np.math.pi/2):
+    #     # twist to the left
+    #     # move_world_joint(np.math.pi/2)
+    #     # detect the dropbox while facing left
+    #     for detected_object in detected_objects:
+    #         if detected_object.label == 'dropbox':
+    #             left_depositbox_cloud = detected_object.cloud
+    #
+    #     # twist back to the original position
+    #     move_world_joint(0)
+    #
+    # # publish the depostibox clouds as collidable
+    # if right_depositbox_cloud:
+    #     collidable_objects_pub.publish(right_depositbox_cloud)
+    # if left_depositbox_cloud:
+    #     collidable_objects_pub.publish(left_depositbox_cloud)
 
-    # publish the depostibox clouds as collidable
-    if right_depositbox_cloud:
-        collidable_objects_pub.publish(right_depositbox_cloud)
-    if left_depositbox_cloud:
-        collidable_objects_pub.publish(left_depositbox_cloud)
 
-
-    # # look around to detect the two dropboxes
+    # look around to detect the two dropboxes
     # move_list = [np.math.pi/2, -np.math.pi/2, 0]
     #
     # for move in move_list:
@@ -457,20 +466,35 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
     # TODO go through all detected objects. If it's the one meant to be moved, make it non-collidable, otherwise,
     # make it collidable
 
+    print("pick routine begin")
     object_to_pick = None
     for object_item in object_list_param:
+
+        # clear the collision map
+        # rospy.wait_for_service('clear_octomap')
+        # clear_octomap = rospy.ServiceProxy('clear_octomap', ClearOctomap)
+        # clear_octomap()
+
+        # publish table to /pr2/3D_map/points to declare it as collidable
+        collidable_objects_pub.publish(ros_cloud_table)
+
+        print("looping to assign collision")
         # publish all other objects as collidable
         for detected_object in detected_objects:
+            print("looping through each detected_object in detected objects to make collidable or not")
             if object_item['name'] == detected_object.label:
+                print("assigning " + detected_object.label + " as pickable and non collidable")
                 object_to_pick = object_dict_items[detected_object.label]
             else:
+                print("assigning " + detected_object.label + " as collidable")
                 collidable_objects_pub.publish(detected_object.cloud)
-
+        print("colision assignment done")
         # TODO pick up the object
             # TODO generate the messgage to be sent to the joints
             # TODO publish the list of messages to the joint
 
         if object_to_pick is not None:
+            print("picking up " + object_to_pick["object_name"].data)
             rospy.wait_for_service('pick_place_routine')
 
             try:
@@ -486,6 +510,8 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
 
             object_to_pick = None
 
+    print("pick routine done")
+
     # for i in range(len(detected_objects)):
     #     # publish all items after it as collidable
     #     for j in range(min(i + 1, len(detected_objects)), len(detected_objects)):
@@ -495,9 +521,13 @@ def pcl_callback(pcl_msg, right_depositbox_cloud = right_depositbox_cloud, left_
     pcl.save(ros_to_pcl(pcl_msg), "new_cloud.pcd")
 
 
+
 if __name__ == '__main__':
     # TODO: ROS node initialization
     rospy.init_node('clustering', anonymous=True)
+
+    # world_joint_publisher
+    world_joint_controller_pub = rospy.Publisher("/pr2/world_joint_controller/command", Float64, queue_size=20)
 
     # TODO: Create Subscribers
     pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2, pcl_callback, queue_size=1)
@@ -511,9 +541,6 @@ if __name__ == '__main__':
 
     # colldable object publisher
     collidable_objects_pub = rospy.Publisher("/pr2/3D_map/points", PointCloud2, queue_size=1)
-
-    # world_joint_publisher
-    world_joint_controller_pub = rospy.Publisher("/pr2/world_joint_controller/command", Float64, queue_size=20)
 
     # Initialize color_list
     get_color_list.color_list = []
@@ -529,6 +556,26 @@ if __name__ == '__main__':
     # twist to the left and right
     # move_world_joint(-np.math.pi/2)
     # move_world_joint(np.math.pi/2)
+    # move_world_joint(0)
+
+    #
+    # global right_twist_done
+    # global left_twist_done
+
+    # if not (right_twist_done and left_twist_done):
+    #     if not right_twist_done:
+    #         print("turning right")
+    #         move_world_joint(-np.math.pi / 2)
+    #         right_twist_done = True
+    #         # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
+    #     #elif not left_twist_done:
+    #         print("turning left")
+    #         move_world_joint(np.math.pi / 2)
+    #         left_twist_done = True
+    #         # pcl.save(ros_to_pcl(pcl_msg), "left_cloud.pcd")
+    #     #else:
+    #         print("returning to 0 orientation")
+    #         move_world_joint(0)
 
     # TODO: Spin while node is not shutdown
     while not rospy.is_shutdown():
