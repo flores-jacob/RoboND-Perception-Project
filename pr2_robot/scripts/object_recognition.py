@@ -264,15 +264,29 @@ def pcl_callback(pcl_msg):
         # Make the prediction, retrieve the label for the result
         # and add it to detected_objects_labels list
 
+        # this will return an array with the probabilities of each choice
+        prediction_confidence_list = clf.predict_proba(scaler.transform(feature.reshape(1, -1)))
+
+        # this will return the index with the highest probability
         prediction = clf.predict(scaler.transform(feature.reshape(1, -1)))
-        label = encoder.inverse_transform(prediction)[0]
+        print("prediction ", type(prediction), prediction)
+
+        # this will return the confidence value in of the prediction
+        prediction_confidence = prediction_confidence_list[0][prediction]
+
+        # if the prediction_confidence is greater than 60%, proceed, else, skip prediction
+
+        if prediction_confidence > 0.65:
+            label = encoder.inverse_transform(prediction)[0]
+        else:
+            label = "?"
         detected_objects_labels.append(label)
 
         # Publish a label into RViz
         label_pos = list(white_cloud[pts_list[0]])
         label_pos[2] += .4
         # print(type(make_label))
-        print("label", label)
+        print("label", label, prediction_confidence)
         # print("label pos",label_pos)
         print("index", index)
         # print(make_label(label,label_pos, index))
@@ -504,22 +518,22 @@ def pcl_callback(pcl_msg):
             # TODO generate the messgage to be sent to the joints
             # TODO publish the list of messages to the joint
 
-        if object_to_pick is not None:
-            print("picking up " + object_to_pick["object_name"].data)
-            rospy.wait_for_service('pick_place_routine')
-
-            try:
-                pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
-
-                resp = pick_place_routine(object_to_pick["test_scene_num"], object_to_pick["object_name"], object_to_pick["arm_name"], object_to_pick["pick_pose"],
-                                          object_to_pick["place_pose"])
-
-                print ("Response: ", resp.success)
-
-            except rospy.ServiceException, e:
-                print "Service call failed: %s" % e
-
-            object_to_pick = None
+        # if object_to_pick is not None:
+        #     print("picking up " + object_to_pick["object_name"].data)
+        #     rospy.wait_for_service('pick_place_routine')
+        #
+        #     try:
+        #         pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
+        #
+        #         resp = pick_place_routine(object_to_pick["test_scene_num"], object_to_pick["object_name"], object_to_pick["arm_name"], object_to_pick["pick_pose"],
+        #                                   object_to_pick["place_pose"])
+        #
+        #         print ("Response: ", resp.success)
+        #
+        #     except rospy.ServiceException, e:
+        #         print "Service call failed: %s" % e
+        #
+        #     object_to_pick = None
 
     print("pick routine done")
 
@@ -573,20 +587,20 @@ if __name__ == '__main__':
     # global right_twist_done
     # global left_twist_done
 
-    # if not (right_twist_done and left_twist_done):
-    #     if not right_twist_done:
-    #         print("turning right")
-    #         move_world_joint(-np.math.pi / 2)
-    #         right_twist_done = True
-    #         # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
-    #     #elif not left_twist_done:
-    #         print("turning left")
-    #         move_world_joint(np.math.pi / 2)
-    #         left_twist_done = True
-    #         # pcl.save(ros_to_pcl(pcl_msg), "left_cloud.pcd")
-    #     #else:
-    #         print("returning to 0 orientation")
-    #         move_world_joint(0)
+    if not (right_twist_done and left_twist_done):
+        if not right_twist_done:
+            print("turning right")
+            move_world_joint(-np.math.pi / 2)
+            right_twist_done = True
+            # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
+        #elif not left_twist_done:
+            print("turning left")
+            move_world_joint(np.math.pi / 2)
+            left_twist_done = True
+            # pcl.save(ros_to_pcl(pcl_msg), "left_cloud.pcd")
+        #else:
+            print("returning to 0 orientation")
+            move_world_joint(0)
 
     # TODO: Spin while node is not shutdown
     while not rospy.is_shutdown():
