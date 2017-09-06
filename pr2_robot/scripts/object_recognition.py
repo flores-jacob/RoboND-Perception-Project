@@ -130,32 +130,100 @@ def pcl_callback(pcl_msg):
     # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/voxel_downsampled.pcd")
     print("voxel downsampled cloud saved")
 
-    # PassThrough Filter for z axis to remove table
-    passthrough_z = cloud_filtered.make_passthrough_filter()
-
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'z'
-    passthrough_z.set_filter_field_name(filter_axis)
-    # axis_min = .6101
-    axis_min = .6
-    axis_max = .9
-    passthrough_z.set_filter_limits(axis_min, axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_z = passthrough_z.filter()
-
-    # passthrough_x = cloud_filtered_z.make_passthrough_filter()
+    # # PassThrough Filter for z axis to remove table
+    # passthrough_z = cloud_filtered.make_passthrough_filter()
     #
     # # Assign axis and range to the passthrough filter object.
-    # filter_axis = 'x'
-    # passthrough_x.set_filter_field_name(filter_axis)
-    # axis_min = .33
-    # axis_max = .95
-    # passthrough_x.set_filter_limits(axis_min, axis_max)
+    # filter_axis = 'z'
+    # passthrough_z.set_filter_field_name(filter_axis)
+    # # axis_min = .6101
+    # # .6 for test world .5 or 0 for challenge world
+    # axis_min = 0.0
+    # axis_max = 1.0
+    # passthrough_z.set_filter_limits(axis_min, axis_max)
     #
-    # cloud_filtered = passthrough_x.filter()
+    # # Finally use the filter function to obtain the resultant point cloud.
+    # cloud_filtered_z = passthrough_z.filter()
 
-    cloud_filtered = cloud_filtered_z
+    # passthrough filter ranges to remove tables
+    # bottom area 0 - 0.45
+    # middle area 0.55(left side) 0.551 (right side) - 0.775
+    # top area 0.825 (left side) 0.8251 (right side) - 1.0
+
+    passthrough_filter_bottom = cloud_filtered.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_filter_bottom.set_filter_field_name(filter_axis)
+    # bottom_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    bottom_axis_min = 0.0
+    bottom_axis_max = 0.45
+    passthrough_filter_bottom.set_filter_limits(bottom_axis_min, bottom_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_bottom = passthrough_filter_bottom.filter()
+
+    passthrough_filter_middle = cloud_filtered.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_filter_middle.set_filter_field_name(filter_axis)
+    # middle_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    middle_axis_min = 0.551
+    middle_axis_max = 0.775
+    passthrough_filter_middle.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_middle = passthrough_filter_middle.filter()
+
+
+    passthrough_filter_y_middle_left = cloud_filtered_z_middle.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_middle_left.set_filter_field_name(filter_axis)
+    middle_axis_min = 0
+    middle_axis_max = 0.9
+    passthrough_filter_y_middle_left.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_middle_left = passthrough_filter_y_middle_left.filter()
+
+
+    passthrough_filter_y_middle_right = cloud_filtered_z_middle.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_middle_right.set_filter_field_name(filter_axis)
+    middle_axis_min = -0.89
+    middle_axis_max = 0
+    passthrough_filter_y_middle_right.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_middle_right = passthrough_filter_y_middle_right.filter()
+
+
+    passthrough_filter_top = cloud_filtered.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_filter_top.set_filter_field_name(filter_axis)
+    # top_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    top_axis_min = 0.8251
+    top_axis_max = 1.0
+    passthrough_filter_top.set_filter_limits(top_axis_min, top_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_top = passthrough_filter_top.filter()
+
+    # convert to arrays,then to lists, to enable combination later on
+
+    cloud_filtered_z_bottom_list = cloud_filtered_z_bottom.to_array().tolist()
+    cloud_filtered_middle_list = cloud_filtered_middle_left.to_array().tolist() + cloud_filtered_middle_right.to_array().tolist()
+    cloud_filtered_z_top_list = cloud_filtered_z_top.to_array().tolist()
+
+    combined_passthrough_filtered_list = cloud_filtered_z_bottom_list + cloud_filtered_middle_list + cloud_filtered_z_top_list
+
+    cloud_filtered = pcl.PointCloud_PointXYZRGB()
+    cloud_filtered.from_list(combined_passthrough_filtered_list)
 
     # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
     print("passthrough filtered cloud saved")
