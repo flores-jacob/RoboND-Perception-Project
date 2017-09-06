@@ -192,7 +192,7 @@ def pcl_callback(pcl_msg):
     filter_axis = 'y'
     passthrough_filter_y_middle_left.set_filter_field_name(filter_axis)
     middle_axis_min = 0
-    middle_axis_max = 0.9
+    middle_axis_max = 0.855
     passthrough_filter_y_middle_left.set_filter_limits(middle_axis_min, middle_axis_max)
 
     # Finally use the filter function to obtain the resultant point cloud.
@@ -202,7 +202,7 @@ def pcl_callback(pcl_msg):
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
     passthrough_filter_y_middle_right.set_filter_field_name(filter_axis)
-    middle_axis_min = -0.89
+    middle_axis_min = -0.855
     middle_axis_max = 0
     passthrough_filter_y_middle_right.set_filter_limits(middle_axis_min, middle_axis_max)
 
@@ -218,7 +218,7 @@ def pcl_callback(pcl_msg):
     passthrough_filter_top.set_filter_field_name(filter_axis)
     # top_axis_min = .6101
     # .6 for test world .5 or 0 for challenge world
-    top_axis_min = 0.8251
+    top_axis_min = 0.826
     top_axis_max = 1.0
     passthrough_filter_top.set_filter_limits(top_axis_min, top_axis_max)
 
@@ -409,7 +409,7 @@ def pcl_callback(pcl_msg):
 
 
 if __name__ == '__main__':
-    cloud = pcl.load_XYZRGB('sample_pcd_files/left_cloud.pcd')
+    cloud = pcl.load_XYZRGB('sample_pcd_files/new_cloud.pcd')
 
     get_color_list.color_list = []
 
