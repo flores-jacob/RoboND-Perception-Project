@@ -150,6 +150,8 @@ def pcl_callback(pcl_msg):
     # middle area 0.55(left side) 0.551 (right side) - 0.775
     # top area 0.825 (left side) 0.8251 (right side) - 1.0
 
+
+    # **************** START filter bottom layer *******************
     passthrough_filter_bottom = cloud_filtered.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
@@ -163,6 +165,32 @@ def pcl_callback(pcl_msg):
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_bottom = passthrough_filter_bottom.filter()
 
+    passthrough_filter_y_bottom_left = cloud_filtered_z_bottom.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_bottom_left.set_filter_field_name(filter_axis)
+    bottom_axis_min = 1
+    bottom_axis_max = 20
+    passthrough_filter_y_bottom_left.set_filter_limits(bottom_axis_min, bottom_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_bottom_left = passthrough_filter_y_bottom_left.filter()
+
+    passthrough_filter_y_bottom_right = cloud_filtered_z_bottom.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_bottom_right.set_filter_field_name(filter_axis)
+    bottom_axis_min = -20
+    bottom_axis_max = -1
+    passthrough_filter_y_bottom_right.set_filter_limits(bottom_axis_min, bottom_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_bottom_right = passthrough_filter_y_bottom_right.filter()
+    # **************** END filter bottom layer *******************
+
+
+
+    # **************** START filter middle layer *******************
     passthrough_filter_middle = cloud_filtered.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
@@ -176,7 +204,6 @@ def pcl_callback(pcl_msg):
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_middle = passthrough_filter_middle.filter()
 
-
     passthrough_filter_y_middle_left = cloud_filtered_z_middle.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
@@ -188,7 +215,6 @@ def pcl_callback(pcl_msg):
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_middle_left = passthrough_filter_y_middle_left.filter()
 
-
     passthrough_filter_y_middle_right = cloud_filtered_z_middle.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
@@ -199,8 +225,10 @@ def pcl_callback(pcl_msg):
 
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_middle_right = passthrough_filter_y_middle_right.filter()
+    # **************** END filter middle layer *******************
 
 
+    # **************** START filter top layer *******************
     passthrough_filter_top = cloud_filtered.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
@@ -213,14 +241,15 @@ def pcl_callback(pcl_msg):
 
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_top = passthrough_filter_top.filter()
+    # **************** END filter top layer *******************
 
     # convert to arrays,then to lists, to enable combination later on
 
-    cloud_filtered_z_bottom_list = cloud_filtered_z_bottom.to_array().tolist()
+    cloud_filtered_bottom_list = cloud_filtered_bottom_left.to_array().tolist() + cloud_filtered_bottom_right.to_array().tolist()
     cloud_filtered_middle_list = cloud_filtered_middle_left.to_array().tolist() + cloud_filtered_middle_right.to_array().tolist()
     cloud_filtered_z_top_list = cloud_filtered_z_top.to_array().tolist()
 
-    combined_passthrough_filtered_list = cloud_filtered_z_bottom_list + cloud_filtered_middle_list + cloud_filtered_z_top_list
+    combined_passthrough_filtered_list = cloud_filtered_bottom_list + cloud_filtered_middle_list + cloud_filtered_z_top_list
 
     cloud_filtered = pcl.PointCloud_PointXYZRGB()
     cloud_filtered.from_list(combined_passthrough_filtered_list)
