@@ -6,7 +6,7 @@ import sklearn
 from sklearn.preprocessing import LabelEncoder
 import pickle
 
-# from pcl_helper import get_color_list, ros_to_pcl, XYZRGB_to_XYZ, rgb_to_float
+# from pcl_helper import get_color_list, ros_to_pcl, XYZRGB_to_XYZ, rgb_to_float, pcl_to_ros
 
 # TODO remove in production
 import pcl
@@ -159,6 +159,32 @@ def pcl_callback(pcl_msg):
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_middle = passthrough_filter_middle.filter()
 
+
+
+    passthrough_filter_y_middle_left = cloud_filtered_z_middle.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_middle_left.set_filter_field_name(filter_axis)
+    middle_axis_min = 0
+    middle_axis_max = 0.9
+    passthrough_filter_y_middle_left.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_middle_left = passthrough_filter_y_middle_left.filter()
+
+
+    passthrough_filter_y_middle_right = cloud_filtered_z_middle.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_middle_right.set_filter_field_name(filter_axis)
+    middle_axis_min = -0.89
+    middle_axis_max = 0
+    passthrough_filter_y_middle_right.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_middle_right = passthrough_filter_y_middle_right.filter()
+
+
     passthrough_filter_top = cloud_filtered.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
@@ -175,10 +201,10 @@ def pcl_callback(pcl_msg):
     # convert to arrays,then to lists, to enable combination later on
 
     cloud_filtered_z_bottom_list = cloud_filtered_z_bottom.to_array().tolist()
-    cloud_filtered_z_middle_list = cloud_filtered_z_middle.to_array().tolist()
+    cloud_filtered_middle_list = cloud_filtered_middle_left.to_array().tolist() + cloud_filtered_middle_right.to_array().tolist()
     cloud_filtered_z_top_list = cloud_filtered_z_top.to_array().tolist()
 
-    combined_passthrough_filtered_list = cloud_filtered_z_bottom_list + cloud_filtered_z_middle_list + cloud_filtered_z_top_list
+    combined_passthrough_filtered_list = cloud_filtered_z_bottom_list + cloud_filtered_middle_list + cloud_filtered_z_top_list
 
     cloud_filtered = pcl.PointCloud_PointXYZRGB()
     cloud_filtered.from_list(combined_passthrough_filtered_list)
@@ -209,7 +235,7 @@ def pcl_callback(pcl_msg):
     outlier_filter.set_mean_k(10)
 
     # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
-    outlier_filter.set_std_dev_mul_thresh(0.5)
+    outlier_filter.set_std_dev_mul_thresh(.5)
 
     # Remove noise from object are
     cloud_filtered = outlier_filter.filter()
@@ -304,9 +330,7 @@ def pcl_callback(pcl_msg):
 
     # Exercise-3 TODOs: identify the objects
 
-    # detected_objects_labels = []
-    # detected_objects = []
-    #
+
     for index, pts_list in enumerate(cluster_indices):
         # Grab the points for the cluster
         pcl_cluster = cloud_objects.extract(pts_list)
