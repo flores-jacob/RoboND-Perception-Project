@@ -89,6 +89,133 @@ def rgb_to_float(color):
     return float_rgb
 
 
+def passthrough_filter_challenge_world(pcl_cloud):
+    # **************** START filter bottom layer *******************
+    passthrough_filter_bottom = pcl_cloud.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_filter_bottom.set_filter_field_name(filter_axis)
+    # bottom_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    bottom_axis_min = 0.0001
+    bottom_axis_max = 0.45
+    passthrough_filter_bottom.set_filter_limits(bottom_axis_min, bottom_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_bottom = passthrough_filter_bottom.filter()
+
+    passthrough_filter_y_bottom_left = cloud_filtered_z_bottom.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_bottom_left.set_filter_field_name(filter_axis)
+    bottom_axis_min = 1
+    bottom_axis_max = 20
+    passthrough_filter_y_bottom_left.set_filter_limits(bottom_axis_min, bottom_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_bottom_left = passthrough_filter_y_bottom_left.filter()
+
+    passthrough_filter_y_bottom_right = cloud_filtered_z_bottom.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_bottom_right.set_filter_field_name(filter_axis)
+    bottom_axis_min = -20
+    bottom_axis_max = -1
+    passthrough_filter_y_bottom_right.set_filter_limits(bottom_axis_min, bottom_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_bottom_right = passthrough_filter_y_bottom_right.filter()
+    # **************** END filter bottom layer *******************
+
+
+
+    # **************** START filter middle layer *******************
+    passthrough_filter_z_middle = pcl_cloud.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_filter_z_middle.set_filter_field_name(filter_axis)
+    # middle_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    middle_axis_min = 0.558 # 0.551 works for left and right, but 0.558 works for front
+    middle_axis_max = 0.775
+    passthrough_filter_z_middle.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_middle = passthrough_filter_z_middle.filter()
+
+
+    passthrough_filter_x_middle = cloud_filtered_z_middle.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'x'
+    passthrough_filter_x_middle.set_filter_field_name(filter_axis)
+    # middle_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    middle_axis_min = -20
+    middle_axis_max = .7
+    passthrough_filter_x_middle.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_x_middle = passthrough_filter_x_middle.filter()
+
+
+    passthrough_filter_y_middle_left = cloud_filtered_x_middle.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_middle_left.set_filter_field_name(filter_axis)
+    middle_axis_min = 0
+    middle_axis_max = 0.855
+    passthrough_filter_y_middle_left.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_middle_left = passthrough_filter_y_middle_left.filter()
+
+    passthrough_filter_y_middle_right = cloud_filtered_x_middle.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_middle_right.set_filter_field_name(filter_axis)
+    middle_axis_min = -0.855
+    middle_axis_max = 0
+    passthrough_filter_y_middle_right.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_middle_right = passthrough_filter_y_middle_right.filter()
+    # **************** END filter middle layer *******************
+
+
+    # **************** START filter top layer *******************
+    passthrough_filter_top = pcl_cloud.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_filter_top.set_filter_field_name(filter_axis)
+    # top_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    top_axis_min = 0.826
+    top_axis_max = 1.0
+    passthrough_filter_top.set_filter_limits(top_axis_min, top_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_top = passthrough_filter_top.filter()
+    # **************** END filter top layer *******************
+
+    # convert to arrays,then to lists, to enable combination later on
+
+    cloud_filtered_bottom_list = cloud_filtered_bottom_left.to_array().tolist() + cloud_filtered_bottom_right.to_array().tolist()
+    cloud_filtered_middle_list = cloud_filtered_middle_left.to_array().tolist() + cloud_filtered_middle_right.to_array().tolist()
+    cloud_filtered_z_top_list = cloud_filtered_z_top.to_array().tolist()
+
+    combined_passthrough_filtered_list = cloud_filtered_bottom_list + cloud_filtered_middle_list + cloud_filtered_z_top_list
+
+    filtered_cloud = pcl.PointCloud_PointXYZRGB()
+    filtered_cloud.from_list(combined_passthrough_filtered_list)
+
+    return filtered_cloud
+
+
+
+def passthrough_filter_test_world():
+    pass
+
+
 # Callback function for your Point Cloud Subscriber
 def pcl_callback(pcl_msg):
     # Exercise-2 TODOs: segment and cluster the objects
@@ -156,123 +283,10 @@ def pcl_callback(pcl_msg):
     # top area 0.825 (left side) 0.8251 (right side) - 1.0
 
 
-    # **************** START filter bottom layer *******************
-    passthrough_filter_bottom = cloud_filtered.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'z'
-    passthrough_filter_bottom.set_filter_field_name(filter_axis)
-    # bottom_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
-    bottom_axis_min = 0.0001
-    bottom_axis_max = 0.45
-    passthrough_filter_bottom.set_filter_limits(bottom_axis_min, bottom_axis_max)
+    # TODO insert passthrough filtering
 
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_z_bottom = passthrough_filter_bottom.filter()
+    cloud_filtered = passthrough_filter_challenge_world(cloud_filtered)
 
-    passthrough_filter_y_bottom_left = cloud_filtered_z_bottom.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'y'
-    passthrough_filter_y_bottom_left.set_filter_field_name(filter_axis)
-    bottom_axis_min = 1
-    bottom_axis_max = 20
-    passthrough_filter_y_bottom_left.set_filter_limits(bottom_axis_min, bottom_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_bottom_left = passthrough_filter_y_bottom_left.filter()
-
-    passthrough_filter_y_bottom_right = cloud_filtered_z_bottom.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'y'
-    passthrough_filter_y_bottom_right.set_filter_field_name(filter_axis)
-    bottom_axis_min = -20
-    bottom_axis_max = -1
-    passthrough_filter_y_bottom_right.set_filter_limits(bottom_axis_min, bottom_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_bottom_right = passthrough_filter_y_bottom_right.filter()
-    # **************** END filter bottom layer *******************
-
-
-
-    # **************** START filter middle layer *******************
-    passthrough_filter_z_middle = cloud_filtered.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'z'
-    passthrough_filter_z_middle.set_filter_field_name(filter_axis)
-    # middle_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
-    middle_axis_min = 0.558 # 0.551 works for left and right, but 0.558 works for front
-    middle_axis_max = 0.775
-    passthrough_filter_z_middle.set_filter_limits(middle_axis_min, middle_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_z_middle = passthrough_filter_z_middle.filter()
-
-
-    passthrough_filter_x_middle = cloud_filtered_z_middle.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'x'
-    passthrough_filter_x_middle.set_filter_field_name(filter_axis)
-    # middle_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
-    middle_axis_min = -20
-    middle_axis_max = .7
-    passthrough_filter_x_middle.set_filter_limits(middle_axis_min, middle_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_x_middle = passthrough_filter_x_middle.filter()
-
-
-    passthrough_filter_y_middle_left = cloud_filtered_x_middle.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'y'
-    passthrough_filter_y_middle_left.set_filter_field_name(filter_axis)
-    middle_axis_min = 0
-    middle_axis_max = 0.855
-    passthrough_filter_y_middle_left.set_filter_limits(middle_axis_min, middle_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_middle_left = passthrough_filter_y_middle_left.filter()
-
-    passthrough_filter_y_middle_right = cloud_filtered_x_middle.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'y'
-    passthrough_filter_y_middle_right.set_filter_field_name(filter_axis)
-    middle_axis_min = -0.855
-    middle_axis_max = 0
-    passthrough_filter_y_middle_right.set_filter_limits(middle_axis_min, middle_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_middle_right = passthrough_filter_y_middle_right.filter()
-    # **************** END filter middle layer *******************
-
-
-    # **************** START filter top layer *******************
-    passthrough_filter_top = cloud_filtered.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'z'
-    passthrough_filter_top.set_filter_field_name(filter_axis)
-    # top_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
-    top_axis_min = 0.826
-    top_axis_max = 1.0
-    passthrough_filter_top.set_filter_limits(top_axis_min, top_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_z_top = passthrough_filter_top.filter()
-    # **************** END filter top layer *******************
-
-    # convert to arrays,then to lists, to enable combination later on
-
-    cloud_filtered_bottom_list = cloud_filtered_bottom_left.to_array().tolist() + cloud_filtered_bottom_right.to_array().tolist()
-    cloud_filtered_middle_list = cloud_filtered_middle_left.to_array().tolist() + cloud_filtered_middle_right.to_array().tolist()
-    cloud_filtered_z_top_list = cloud_filtered_z_top.to_array().tolist()
-
-    combined_passthrough_filtered_list = cloud_filtered_bottom_list + cloud_filtered_middle_list + cloud_filtered_z_top_list
-
-    cloud_filtered = pcl.PointCloud_PointXYZRGB()
-    cloud_filtered.from_list(combined_passthrough_filtered_list)
 
     pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
     print("passthrough filtered cloud saved")
@@ -436,7 +450,7 @@ def pcl_callback(pcl_msg):
 
 
 if __name__ == '__main__':
-    cloud = pcl.load_XYZRGB('sample_pcd_files/front_cloud.pcd')
+    cloud = pcl.load_XYZRGB('sample_pcd_files/left_cloud.pcd')
 
     get_color_list.color_list = []
 
