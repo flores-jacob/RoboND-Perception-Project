@@ -135,7 +135,7 @@ def passthrough_filter_challenge_world(pcl_cloud):
     cloud_filtered_bottom_right = passthrough_filter_y_bottom_right.filter()
     # **************** END filter bottom layer *******************
 
-    pcl.save(cloud_filtered_bottom_right, OUTPUT_PCD_DIRECTORY + "/bottom.pcd")
+    # pcl.save(cloud_filtered_bottom_right, OUTPUT_PCD_DIRECTORY + "/bottom.pcd")
 
 
 
@@ -191,7 +191,7 @@ def passthrough_filter_challenge_world(pcl_cloud):
     cloud_filtered_middle_right = passthrough_filter_y_middle_right.filter()
     # **************** END filter middle layer *******************
 
-    pcl.save(cloud_filtered_middle_right, OUTPUT_PCD_DIRECTORY + "/middle.pcd")
+    # pcl.save(cloud_filtered_middle_right, OUTPUT_PCD_DIRECTORY + "/middle.pcd")
 
 
     # **************** START filter top layer *******************
@@ -209,7 +209,7 @@ def passthrough_filter_challenge_world(pcl_cloud):
     cloud_filtered_z_top = passthrough_filter_top.filter()
     # **************** END filter top layer *******************
 
-    pcl.save(cloud_filtered_z_top, OUTPUT_PCD_DIRECTORY + "/top.pcd")
+    # pcl.save(cloud_filtered_z_top, OUTPUT_PCD_DIRECTORY + "/top.pcd")
 
 
     # convert to arrays,then to lists, to enable combination later on
@@ -223,7 +223,7 @@ def passthrough_filter_challenge_world(pcl_cloud):
     filtered_cloud = pcl.PointCloud_PointXYZRGB()
     filtered_cloud.from_list(combined_passthrough_filtered_list)
 
-    pcl.save(filtered_cloud, OUTPUT_PCD_DIRECTORY + "/combined.pcd")
+    # pcl.save(filtered_cloud, OUTPUT_PCD_DIRECTORY + "/combined.pcd")
 
 
     return filtered_cloud
