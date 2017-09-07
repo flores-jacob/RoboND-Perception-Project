@@ -163,7 +163,7 @@ def pcl_callback(pcl_msg):
     passthrough_filter_bottom.set_filter_field_name(filter_axis)
     # bottom_axis_min = .6101
     # .6 for test world .5 or 0 for challenge world
-    bottom_axis_min = 0.0
+    bottom_axis_min = 0.0001
     bottom_axis_max = 0.45
     passthrough_filter_bottom.set_filter_limits(bottom_axis_min, bottom_axis_max)
 
@@ -202,7 +202,7 @@ def pcl_callback(pcl_msg):
     passthrough_filter_z_middle.set_filter_field_name(filter_axis)
     # middle_axis_min = .6101
     # .6 for test world .5 or 0 for challenge world
-    middle_axis_min = 0.558 # 0.551 works for left and right
+    middle_axis_min = 0.558 # 0.551 works for left and right, but 0.558 works for front
     middle_axis_max = 0.775
     passthrough_filter_z_middle.set_filter_limits(middle_axis_min, middle_axis_max)
 
@@ -312,34 +312,34 @@ def pcl_callback(pcl_msg):
 
 
 
-    # RANSAC Plane Segmentation
-    seg = cloud_filtered.make_segmenter()
-
-    # Set the model you wish to fit
-    seg.set_model_type(pcl.SACMODEL_PLANE)
-    seg.set_method_type(pcl.SAC_RANSAC)
-
-    # Max distance for a point to be considered fitting the model
-    # Experiment with different values for max_distance
-    # for segmenting the table
-    max_distance = .003
-    seg.set_distance_threshold(max_distance)
-
-    # Call the segment function to obtain set of inlier indices and model coefficients
-    inliers, coefficients = seg.segment()
-
-    # Extract inliers and outliers
-    # Extract inliers - models that fit the model (plane)
-    cloud_table = cloud_filtered.extract(inliers, negative=False)
-    # Extract outliers - models that do not fit the model (non-planes)
-    cloud_objects = cloud_filtered.extract(inliers, negative=True)
-
-    pcl.save(cloud_table, OUTPUT_PCD_DIRECTORY + "/cloud_table.pcd")
-    pcl.save(cloud_objects, OUTPUT_PCD_DIRECTORY + "/cloud_objects.pcd")
-    print("RANSAC clouds saved")
+    # # RANSAC Plane Segmentation
+    # seg = cloud_filtered.make_segmenter()
+    #
+    # # Set the model you wish to fit
+    # seg.set_model_type(pcl.SACMODEL_PLANE)
+    # seg.set_method_type(pcl.SAC_RANSAC)
+    #
+    # # Max distance for a point to be considered fitting the model
+    # # Experiment with different values for max_distance
+    # # for segmenting the table
+    # max_distance = .003
+    # seg.set_distance_threshold(max_distance)
+    #
+    # # Call the segment function to obtain set of inlier indices and model coefficients
+    # inliers, coefficients = seg.segment()
+    #
+    # # Extract inliers and outliers
+    # # Extract inliers - models that fit the model (plane)
+    # cloud_table = cloud_filtered.extract(inliers, negative=False)
+    # # Extract outliers - models that do not fit the model (non-planes)
+    # cloud_objects = cloud_filtered.extract(inliers, negative=True)
+    #
+    # pcl.save(cloud_table, OUTPUT_PCD_DIRECTORY + "/cloud_table.pcd")
+    # pcl.save(cloud_objects, OUTPUT_PCD_DIRECTORY + "/cloud_objects.pcd")
+    # print("RANSAC clouds saved")
 
     # Euclidean Clustering
-    white_cloud = XYZRGB_to_XYZ(cloud_objects)
+    white_cloud = XYZRGB_to_XYZ(cloud_filtered)
     tree = white_cloud.make_kdtree()
 
     # Create Cluster-Mask Point Cloud to visualize each cluster separately
@@ -388,7 +388,7 @@ def pcl_callback(pcl_msg):
 
     for index, pts_list in enumerate(cluster_indices):
         # Grab the points for the cluster
-        pcl_cluster = cloud_objects.extract(pts_list)
+        pcl_cluster = cloud_filtered.extract(pts_list)
         # TODO: convert the cluster from pcl to ROS using helper function
         # ros_cluster = pcl_to_ros(pcl_cluster)
         if index == 0:
@@ -436,7 +436,7 @@ def pcl_callback(pcl_msg):
 
 
 if __name__ == '__main__':
-    cloud = pcl.load_XYZRGB('sample_pcd_files/left_cloud.pcd')
+    cloud = pcl.load_XYZRGB('sample_pcd_files/front_cloud.pcd')
 
     get_color_list.color_list = []
 
