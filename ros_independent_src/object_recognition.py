@@ -135,6 +135,8 @@ def passthrough_filter_challenge_world(pcl_cloud):
     cloud_filtered_bottom_right = passthrough_filter_y_bottom_right.filter()
     # **************** END filter bottom layer *******************
 
+    pcl.save(cloud_filtered_bottom_right, OUTPUT_PCD_DIRECTORY + "/bottom.pcd")
+
 
 
     # **************** START filter middle layer *******************
@@ -189,6 +191,8 @@ def passthrough_filter_challenge_world(pcl_cloud):
     cloud_filtered_middle_right = passthrough_filter_y_middle_right.filter()
     # **************** END filter middle layer *******************
 
+    pcl.save(cloud_filtered_middle_right, OUTPUT_PCD_DIRECTORY + "/middle.pcd")
+
 
     # **************** START filter top layer *******************
     passthrough_filter_top = pcl_cloud.make_passthrough_filter()
@@ -205,6 +209,9 @@ def passthrough_filter_challenge_world(pcl_cloud):
     cloud_filtered_z_top = passthrough_filter_top.filter()
     # **************** END filter top layer *******************
 
+    pcl.save(cloud_filtered_z_top, OUTPUT_PCD_DIRECTORY + "/top.pcd")
+
+
     # convert to arrays,then to lists, to enable combination later on
 
     cloud_filtered_bottom_list = cloud_filtered_bottom_left.to_array().tolist() + cloud_filtered_bottom_right.to_array().tolist()
@@ -215,6 +222,9 @@ def passthrough_filter_challenge_world(pcl_cloud):
 
     filtered_cloud = pcl.PointCloud_PointXYZRGB()
     filtered_cloud.from_list(combined_passthrough_filtered_list)
+
+    pcl.save(filtered_cloud, OUTPUT_PCD_DIRECTORY + "/combined.pcd")
+
 
     return filtered_cloud
 
@@ -302,7 +312,7 @@ def pcl_callback(pcl_msg):
         # if the world is the challenge world perform passthrough filtering for challenge worlds
         cloud_objects = passthrough_filter_challenge_world(cloud_filtered)
 
-        pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
+        pcl.save(cloud_objects, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
         print("passthrough filtered cloud saved")
 
         # No RANSAC segmentation for challenge world, since all tables are passthrough filtered
@@ -472,7 +482,7 @@ def pcl_callback(pcl_msg):
 
 
 if __name__ == '__main__':
-    cloud = pcl.load_XYZRGB('sample_pcd_files/right_cloud.pcd')
+    cloud = pcl.load_XYZRGB('sample_pcd_files/new_cloud.pcd')
 
     get_color_list.color_list = []
 

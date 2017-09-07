@@ -38,6 +38,8 @@ from sensor_msgs.msg import JointState
 DEV_FLAG = 0
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
 
+WORLD = "challenge"
+
 # initialize deposit box variables
 right_depositbox_cloud = None
 left_depositbox_cloud = None
@@ -107,6 +109,167 @@ def move_world_joint(goal_j1):
     return move_complete
 
 
+def passthrough_filter_challenge_world(pcl_cloud):
+
+    # passthrough filter ranges to remove tables
+    # bottom area 0 - 0.45
+    # middle area 0.55(left side) 0.551 (right side) - 0.775
+    # top area 0.825 (left side) 0.8251 (right side) - 1.0
+
+    # **************** START filter bottom layer *******************
+    passthrough_filter_bottom = pcl_cloud.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_filter_bottom.set_filter_field_name(filter_axis)
+    # bottom_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    bottom_axis_min = 0.0001
+    bottom_axis_max = 0.45
+    passthrough_filter_bottom.set_filter_limits(bottom_axis_min, bottom_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_bottom = passthrough_filter_bottom.filter()
+
+    passthrough_filter_y_bottom_left = cloud_filtered_z_bottom.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_bottom_left.set_filter_field_name(filter_axis)
+    bottom_axis_min = 1
+    bottom_axis_max = 20
+    passthrough_filter_y_bottom_left.set_filter_limits(bottom_axis_min, bottom_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_bottom_left = passthrough_filter_y_bottom_left.filter()
+
+    passthrough_filter_y_bottom_right = cloud_filtered_z_bottom.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_bottom_right.set_filter_field_name(filter_axis)
+    bottom_axis_min = -20
+    bottom_axis_max = -1
+    passthrough_filter_y_bottom_right.set_filter_limits(bottom_axis_min, bottom_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_bottom_right = passthrough_filter_y_bottom_right.filter()
+    # **************** END filter bottom layer *******************
+
+
+
+    # **************** START filter middle layer *******************
+    passthrough_filter_z_middle = pcl_cloud.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_filter_z_middle.set_filter_field_name(filter_axis)
+    # middle_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    middle_axis_min = 0.558 # 0.551 works for left and right, but 0.558 works for front
+    middle_axis_max = 0.775
+    passthrough_filter_z_middle.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_middle = passthrough_filter_z_middle.filter()
+
+
+    passthrough_filter_x_middle = cloud_filtered_z_middle.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'x'
+    passthrough_filter_x_middle.set_filter_field_name(filter_axis)
+    # middle_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    middle_axis_min = -20
+    middle_axis_max = .7
+    passthrough_filter_x_middle.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_x_middle = passthrough_filter_x_middle.filter()
+
+
+    passthrough_filter_y_middle_left = cloud_filtered_x_middle.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_middle_left.set_filter_field_name(filter_axis)
+    middle_axis_min = 0
+    middle_axis_max = 0.855
+    passthrough_filter_y_middle_left.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_middle_left = passthrough_filter_y_middle_left.filter()
+
+    passthrough_filter_y_middle_right = cloud_filtered_x_middle.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'y'
+    passthrough_filter_y_middle_right.set_filter_field_name(filter_axis)
+    middle_axis_min = -0.855
+    middle_axis_max = 0
+    passthrough_filter_y_middle_right.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_middle_right = passthrough_filter_y_middle_right.filter()
+    # **************** END filter middle layer *******************
+
+
+    # **************** START filter top layer *******************
+    passthrough_filter_top = pcl_cloud.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_filter_top.set_filter_field_name(filter_axis)
+    # top_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    top_axis_min = 0.826
+    top_axis_max = 1.0
+    passthrough_filter_top.set_filter_limits(top_axis_min, top_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_top = passthrough_filter_top.filter()
+    # **************** END filter top layer *******************
+
+    # convert to arrays,then to lists, to enable combination later on
+
+    cloud_filtered_bottom_list = cloud_filtered_bottom_left.to_array().tolist() + cloud_filtered_bottom_right.to_array().tolist()
+    cloud_filtered_middle_list = cloud_filtered_middle_left.to_array().tolist() + cloud_filtered_middle_right.to_array().tolist()
+    cloud_filtered_z_top_list = cloud_filtered_z_top.to_array().tolist()
+
+    combined_passthrough_filtered_list = cloud_filtered_bottom_list + cloud_filtered_middle_list + cloud_filtered_z_top_list
+
+    filtered_cloud = pcl.PointCloud_PointXYZRGB()
+    filtered_cloud.from_list(combined_passthrough_filtered_list)
+
+    return filtered_cloud
+
+
+def passthrough_filter_test_world(pcl_cloud):
+    # PassThrough Filter for z axis to remove table
+    passthrough_z = pcl_cloud.make_passthrough_filter()
+
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_z.set_filter_field_name(filter_axis)
+    # axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    axis_min = 0.6
+    axis_max = 1.0
+    passthrough_z.set_filter_limits(axis_min, axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z = passthrough_z.filter()
+
+    # get areas of dropbox
+    passthrough_dropbox_x = cloud_filtered_z.make_passthrough_filter()
+
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'x'
+    passthrough_dropbox_x.set_filter_field_name(filter_axis)
+    # for dropbox axis_min = -1.0, axis_max = .339
+    # for test world axis_min = .339 and axis_max = 1
+    axis_min = 0.339
+    axis_max = 1
+    passthrough_dropbox_x.set_filter_limits(axis_min, axis_max)
+
+    filtered_cloud = passthrough_dropbox_x.filter()
+
+    return filtered_cloud
+
+
 # Callback function for your Point Cloud Subscriber
 def pcl_callback(pcl_msg):
     # Exercise-2 TODOs: segment and cluster the objects
@@ -145,159 +308,55 @@ def pcl_callback(pcl_msg):
     # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/voxel_downsampled.pcd")
     print("voxel downsampled cloud saved")
 
-    # # PassThrough Filter for z axis to remove table
-    # passthrough_z = cloud_filtered.make_passthrough_filter()
-    #
-    # # Assign axis and range to the passthrough filter object.
-    # filter_axis = 'z'
-    # passthrough_z.set_filter_field_name(filter_axis)
-    # # axis_min = .6101
-    # # .6 for test world .5 or 0 for challenge world
-    # axis_min = 0.0
-    # axis_max = 1.0
-    # passthrough_z.set_filter_limits(axis_min, axis_max)
-    #
-    # # Finally use the filter function to obtain the resultant point cloud.
-    # cloud_filtered_z = passthrough_z.filter()
+    # conduct passthrough filtering
+    if WORLD == "challenge":
+        # if the world is the challenge world perform passthrough filtering for challenge worlds
+        cloud_objects = passthrough_filter_challenge_world(cloud_filtered)
+        cloud_table = None
+        # pcl.save(cloud_objects, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
+        print("passthrough filtering done")
 
-    # passthrough filter ranges to remove tables
-    # bottom area 0 - 0.45
-    # middle area 0.55(left side) 0.551 (right side) - 0.775
-    # top area 0.825 (left side) 0.8251 (right side) - 1.0
+        # No RANSAC segmentation for challenge world, since all tables are passthrough filtered
+        # further RANSAC segmentation segments away object surfaces i.e books surfaces may be removed
 
+    elif WORLD == "test":
+        # if the world is the test world perform passthrough filtering for test worlds
+        cloud_filtered = passthrough_filter_test_world(cloud_filtered)
 
-    # **************** START filter bottom layer *******************
-    passthrough_filter_bottom = cloud_filtered.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'z'
-    passthrough_filter_bottom.set_filter_field_name(filter_axis)
-    # bottom_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
-    bottom_axis_min = 0.0
-    bottom_axis_max = 0.45
-    passthrough_filter_bottom.set_filter_limits(bottom_axis_min, bottom_axis_max)
+        # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
+        print("passthrough filtering done")
 
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_z_bottom = passthrough_filter_bottom.filter()
+        # RANSAC Plane Segmentation
+        seg = cloud_filtered.make_segmenter()
 
-    passthrough_filter_y_bottom_left = cloud_filtered_z_bottom.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'y'
-    passthrough_filter_y_bottom_left.set_filter_field_name(filter_axis)
-    bottom_axis_min = 1
-    bottom_axis_max = 20
-    passthrough_filter_y_bottom_left.set_filter_limits(bottom_axis_min, bottom_axis_max)
+        # Set the model you wish to fit
+        seg.set_model_type(pcl.SACMODEL_PLANE)
+        seg.set_method_type(pcl.SAC_RANSAC)
 
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_bottom_left = passthrough_filter_y_bottom_left.filter()
+        # Max distance for a point to be considered fitting the model
+        # Experiment with different values for max_distance
+        # for segmenting the table
+        max_distance = .003
+        seg.set_distance_threshold(max_distance)
 
-    passthrough_filter_y_bottom_right = cloud_filtered_z_bottom.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'y'
-    passthrough_filter_y_bottom_right.set_filter_field_name(filter_axis)
-    bottom_axis_min = -20
-    bottom_axis_max = -1
-    passthrough_filter_y_bottom_right.set_filter_limits(bottom_axis_min, bottom_axis_max)
+        # Call the segment function to obtain set of inlier indices and model coefficients
+        inliers, coefficients = seg.segment()
 
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_bottom_right = passthrough_filter_y_bottom_right.filter()
-    # **************** END filter bottom layer *******************
+        # Extract inliers and outliers
+        # Extract inliers - models that fit the model (plane)
+        cloud_table = cloud_filtered.extract(inliers, negative=False)
+        # Extract outliers - models that do not fit the model (non-planes)
+        cloud_objects = cloud_filtered.extract(inliers, negative=True)
 
+        # pcl.save(cloud_table, OUTPUT_PCD_DIRECTORY + "/cloud_table.pcd")
+        # pcl.save(cloud_objects, OUTPUT_PCD_DIRECTORY + "/cloud_objects.pcd")
+        print("RANSAC segmentation done")
 
-
-    # **************** START filter middle layer *******************
-    passthrough_filter_middle = cloud_filtered.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'z'
-    passthrough_filter_middle.set_filter_field_name(filter_axis)
-    # middle_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
-    middle_axis_min = 0.551
-    middle_axis_max = 0.775
-    passthrough_filter_middle.set_filter_limits(middle_axis_min, middle_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_z_middle = passthrough_filter_middle.filter()
-
-    passthrough_filter_y_middle_left = cloud_filtered_z_middle.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'y'
-    passthrough_filter_y_middle_left.set_filter_field_name(filter_axis)
-    middle_axis_min = 0
-    middle_axis_max = 0.9
-    passthrough_filter_y_middle_left.set_filter_limits(middle_axis_min, middle_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_middle_left = passthrough_filter_y_middle_left.filter()
-
-    passthrough_filter_y_middle_right = cloud_filtered_z_middle.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'y'
-    passthrough_filter_y_middle_right.set_filter_field_name(filter_axis)
-    middle_axis_min = -0.89
-    middle_axis_max = 0
-    passthrough_filter_y_middle_right.set_filter_limits(middle_axis_min, middle_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_middle_right = passthrough_filter_y_middle_right.filter()
-    # **************** END filter middle layer *******************
-
-
-    # **************** START filter top layer *******************
-    passthrough_filter_top = cloud_filtered.make_passthrough_filter()
-    # Assign axis and range to the passthrough filter object.
-    filter_axis = 'z'
-    passthrough_filter_top.set_filter_field_name(filter_axis)
-    # top_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
-    top_axis_min = 0.8251
-    top_axis_max = 1.0
-    passthrough_filter_top.set_filter_limits(top_axis_min, top_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_z_top = passthrough_filter_top.filter()
-    # **************** END filter top layer *******************
-
-    # convert to arrays,then to lists, to enable combination later on
-
-    cloud_filtered_bottom_list = cloud_filtered_bottom_left.to_array().tolist() + cloud_filtered_bottom_right.to_array().tolist()
-    cloud_filtered_middle_list = cloud_filtered_middle_left.to_array().tolist() + cloud_filtered_middle_right.to_array().tolist()
-    cloud_filtered_z_top_list = cloud_filtered_z_top.to_array().tolist()
-
-    combined_passthrough_filtered_list = cloud_filtered_bottom_list + cloud_filtered_middle_list + cloud_filtered_z_top_list
-
-    cloud_filtered = pcl.PointCloud_PointXYZRGB()
-    cloud_filtered.from_list(combined_passthrough_filtered_list)
-
-    # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
-    print("passthrough filtered cloud saved")
-
-
-    # RANSAC Plane Segmentation
-    seg = cloud_filtered.make_segmenter()
-
-    # Set the model you wish to fit
-    seg.set_model_type(pcl.SACMODEL_PLANE)
-    seg.set_method_type(pcl.SAC_RANSAC)
-
-    # Max distance for a point to be considered fitting the model
-    # Experiment with different values for max_distance
-    # for segmenting the table
-    max_distance = .003
-    seg.set_distance_threshold(max_distance)
-
-    # Call the segment function to obtain set of inlier indices and model coefficients
-    inliers, coefficients = seg.segment()
-
-    # Extract inliers and outliers
-    # Extract inliers - models that fit the model (plane)
-    cloud_table = cloud_filtered.extract(inliers, negative=False)
-    # Extract outliers - models that do not fit the model (non-planes)
-    cloud_objects = cloud_filtered.extract(inliers, negative=True)
-
-    # pcl.save(cloud_table, OUTPUT_PCD_DIRECTORY + "/cloud_table.pcd")
-    # pcl.save(cloud_objects, OUTPUT_PCD_DIRECTORY + "/cloud_objects.pcd")
-    print("RANSAC clouds saved")
+    else:
+        # no passthrough filtering for cloud
+        cloud_objects = cloud_filtered
+        cloud_table = None
+        print("No passthrough filtering and RANSAC segmentation done")
 
     # Euclidean Clustering
     white_cloud = XYZRGB_to_XYZ(cloud_objects)
@@ -337,11 +396,13 @@ def pcl_callback(pcl_msg):
 
     # TODO: Convert PCL data to ROS messages
     ros_cloud_objects = pcl_to_ros(cluster_cloud)
-    ros_cloud_table = pcl_to_ros(cloud_table)
+    if cloud_table:
+        ros_cloud_table = pcl_to_ros(cloud_table)
 
     # TODO: Publish ROS messages
     pcl_objects_pub.publish(ros_cloud_objects)
-    pcl_table_pub.publish(ros_cloud_table)
+    if cloud_table:
+        pcl_table_pub.publish(ros_cloud_table)
 
     # Exercise-3 TODOs: identify the objects
 
@@ -589,7 +650,8 @@ def pcl_callback(pcl_msg):
 
 
     # publish table to /pr2/3D_map/points to declare it as collidable
-    collidable_objects_pub.publish(ros_cloud_table)
+    if cloud_table:
+        collidable_objects_pub.publish(ros_cloud_table)
 
     # TODO go through all detected objects. If it's the one meant to be moved, make it non-collidable, otherwise,
     # make it collidable
@@ -687,11 +749,11 @@ if __name__ == '__main__':
     # global right_twist_done
     # global left_twist_done
 
-    # if not (right_twist_done and left_twist_done):
-    #     if not right_twist_done:
-    #         print("turning right")
-    #         move_world_joint(-np.math.pi / 2)
-    #         right_twist_done = True
+    if not (right_twist_done and left_twist_done):
+        if not right_twist_done:
+            print("turning right")
+            move_world_joint(-np.math.pi / 2)
+            right_twist_done = True
     #         # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
     #     #elif not left_twist_done:
     #         print("turning left")
