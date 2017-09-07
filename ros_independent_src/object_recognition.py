@@ -16,6 +16,8 @@ import struct
 DEV_FLAG = 1
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
 
+WORLD = "test"
+
 
 def random_color_gen():
     """ Generates a random color
@@ -90,6 +92,12 @@ def rgb_to_float(color):
 
 
 def passthrough_filter_challenge_world(pcl_cloud):
+
+    # passthrough filter ranges to remove tables
+    # bottom area 0 - 0.45
+    # middle area 0.55(left side) 0.551 (right side) - 0.775
+    # top area 0.825 (left side) 0.8251 (right side) - 1.0
+
     # **************** START filter bottom layer *******************
     passthrough_filter_bottom = pcl_cloud.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
@@ -212,8 +220,37 @@ def passthrough_filter_challenge_world(pcl_cloud):
 
 
 
-def passthrough_filter_test_world():
-    pass
+def passthrough_filter_test_world(pcl_cloud):
+    # PassThrough Filter for z axis to remove table
+    passthrough_z = pcl_cloud.make_passthrough_filter()
+
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_z.set_filter_field_name(filter_axis)
+    # axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    axis_min = 0.6
+    axis_max = 1.0
+    passthrough_z.set_filter_limits(axis_min, axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z = passthrough_z.filter()
+
+    # get areas of dropbox
+    passthrough_dropbox_x = cloud_filtered_z.make_passthrough_filter()
+
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'x'
+    passthrough_dropbox_x.set_filter_field_name(filter_axis)
+    # for dropbox axis_min = -1.0, axis_max = .339
+    # for test world axis_min = .339 and axis_max = 1
+    axis_min = 0.339
+    axis_max = 1
+    passthrough_dropbox_x.set_filter_limits(axis_min, axis_max)
+
+    filtered_cloud = passthrough_dropbox_x.filter()
+
+    return filtered_cloud
 
 
 # Callback function for your Point Cloud Subscriber
@@ -261,35 +298,52 @@ def pcl_callback(pcl_msg):
     print("voxel downsampled cloud saved")
 
 
+    # conduct passthrough filtering
+    if WORLD == "challenge":
+        cloud_objects = passthrough_filter_challenge_world(cloud_filtered)
 
-    # # PassThrough Filter for z axis to remove table
-    # passthrough_z = cloud_filtered.make_passthrough_filter()
-    #
-    # # Assign axis and range to the passthrough filter object.
-    # filter_axis = 'z'
-    # passthrough_z.set_filter_field_name(filter_axis)
-    # # axis_min = .6101
-    # # .6 for test world .5 or 0 for challenge world
-    # axis_min = 0.0
-    # axis_max = 1.0
-    # passthrough_z.set_filter_limits(axis_min, axis_max)
-    #
-    # # Finally use the filter function to obtain the resultant point cloud.
-    # cloud_filtered_z = passthrough_z.filter()
+        pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
+        print("passthrough filtered cloud saved")
 
-    # passthrough filter ranges to remove tables
-    # bottom area 0 - 0.45
-    # middle area 0.55(left side) 0.551 (right side) - 0.775
-    # top area 0.825 (left side) 0.8251 (right side) - 1.0
+        # No RANSAC segmentation for challenge world, since all tables are passthrough filtered
+        # further RANSAC segmentation segments away object surfaces i.e books surfaces may be removed
 
+    elif WORLD == "test":
+        cloud_filtered = passthrough_filter_test_world(cloud_filtered)
 
-    # TODO insert passthrough filtering
+        pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
+        print("passthrough filtered cloud saved")
 
-    cloud_filtered = passthrough_filter_challenge_world(cloud_filtered)
+        # RANSAC Plane Segmentation
+        seg = cloud_filtered.make_segmenter()
 
+        # Set the model you wish to fit
+        seg.set_model_type(pcl.SACMODEL_PLANE)
+        seg.set_method_type(pcl.SAC_RANSAC)
 
-    pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
-    print("passthrough filtered cloud saved")
+        # Max distance for a point to be considered fitting the model
+        # Experiment with different values for max_distance
+        # for segmenting the table
+        max_distance = .003
+        seg.set_distance_threshold(max_distance)
+
+        # Call the segment function to obtain set of inlier indices and model coefficients
+        inliers, coefficients = seg.segment()
+
+        # Extract inliers and outliers
+        # Extract inliers - models that fit the model (plane)
+        cloud_table = cloud_filtered.extract(inliers, negative=False)
+        # Extract outliers - models that do not fit the model (non-planes)
+        cloud_objects = cloud_filtered.extract(inliers, negative=True)
+
+        pcl.save(cloud_table, OUTPUT_PCD_DIRECTORY + "/cloud_table.pcd")
+        pcl.save(cloud_objects, OUTPUT_PCD_DIRECTORY + "/cloud_objects.pcd")
+        print("RANSAC clouds saved")
+
+    else:
+        # no passthrough filtering for cloud
+        cloud_objects = cloud_filtered
+        print("No passthrough filtering and RANSAC segmentation done")
 
     #
     # # get areas of dropbox
@@ -307,10 +361,6 @@ def pcl_callback(pcl_msg):
     # pcl.save(cloud_filtered_dropbox, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered_dropbox.pcd")
     # print("passthrough filtered dropbox cloud saved")
 
-
-
-
-
     # # Remove noise from dropbox area
     # dropbox_filter = cloud_filtered_dropbox.make_statistical_outlier_filter()
     #
@@ -324,36 +374,8 @@ def pcl_callback(pcl_msg):
     # pcl.save(dropbox_filtered, OUTPUT_PCD_DIRECTORY + "/noise_reduced_dropbox.pcd")
     # print ("noise reduced dropbox cloud saved")
 
-
-
-    # # RANSAC Plane Segmentation
-    # seg = cloud_filtered.make_segmenter()
-    #
-    # # Set the model you wish to fit
-    # seg.set_model_type(pcl.SACMODEL_PLANE)
-    # seg.set_method_type(pcl.SAC_RANSAC)
-    #
-    # # Max distance for a point to be considered fitting the model
-    # # Experiment with different values for max_distance
-    # # for segmenting the table
-    # max_distance = .003
-    # seg.set_distance_threshold(max_distance)
-    #
-    # # Call the segment function to obtain set of inlier indices and model coefficients
-    # inliers, coefficients = seg.segment()
-    #
-    # # Extract inliers and outliers
-    # # Extract inliers - models that fit the model (plane)
-    # cloud_table = cloud_filtered.extract(inliers, negative=False)
-    # # Extract outliers - models that do not fit the model (non-planes)
-    # cloud_objects = cloud_filtered.extract(inliers, negative=True)
-    #
-    # pcl.save(cloud_table, OUTPUT_PCD_DIRECTORY + "/cloud_table.pcd")
-    # pcl.save(cloud_objects, OUTPUT_PCD_DIRECTORY + "/cloud_objects.pcd")
-    # print("RANSAC clouds saved")
-
     # Euclidean Clustering
-    white_cloud = XYZRGB_to_XYZ(cloud_filtered)
+    white_cloud = XYZRGB_to_XYZ(cloud_objects)
     tree = white_cloud.make_kdtree()
 
     # Create Cluster-Mask Point Cloud to visualize each cluster separately
@@ -402,7 +424,7 @@ def pcl_callback(pcl_msg):
 
     for index, pts_list in enumerate(cluster_indices):
         # Grab the points for the cluster
-        pcl_cluster = cloud_filtered.extract(pts_list)
+        pcl_cluster = cloud_objects.extract(pts_list)
         # TODO: convert the cluster from pcl to ROS using helper function
         # ros_cluster = pcl_to_ros(pcl_cluster)
         if index == 0:
@@ -450,7 +472,7 @@ def pcl_callback(pcl_msg):
 
 
 if __name__ == '__main__':
-    cloud = pcl.load_XYZRGB('sample_pcd_files/left_cloud.pcd')
+    cloud = pcl.load_XYZRGB('sample_pcd_files/7_objects_with_noise.pcd')
 
     get_color_list.color_list = []
 
