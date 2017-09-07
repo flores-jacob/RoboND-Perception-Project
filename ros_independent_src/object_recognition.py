@@ -16,7 +16,7 @@ import struct
 DEV_FLAG = 1
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
 
-WORLD = "test"
+WORLD = "challenge"
 
 
 def random_color_gen():
@@ -297,9 +297,9 @@ def pcl_callback(pcl_msg):
     pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/voxel_downsampled.pcd")
     print("voxel downsampled cloud saved")
 
-
     # conduct passthrough filtering
     if WORLD == "challenge":
+        # if the world is the challenge world perform passthrough filtering for challenge worlds
         cloud_objects = passthrough_filter_challenge_world(cloud_filtered)
 
         pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
@@ -309,6 +309,7 @@ def pcl_callback(pcl_msg):
         # further RANSAC segmentation segments away object surfaces i.e books surfaces may be removed
 
     elif WORLD == "test":
+        # if the world is the test world perform passthrough filtering for test worlds
         cloud_filtered = passthrough_filter_test_world(cloud_filtered)
 
         pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
@@ -421,7 +422,6 @@ def pcl_callback(pcl_msg):
 
     # Exercise-3 TODOs: identify the objects
 
-
     for index, pts_list in enumerate(cluster_indices):
         # Grab the points for the cluster
         pcl_cluster = cloud_objects.extract(pts_list)
@@ -472,7 +472,7 @@ def pcl_callback(pcl_msg):
 
 
 if __name__ == '__main__':
-    cloud = pcl.load_XYZRGB('sample_pcd_files/7_objects_with_noise.pcd')
+    cloud = pcl.load_XYZRGB('sample_pcd_files/right_cloud.pcd')
 
     get_color_list.color_list = []
 

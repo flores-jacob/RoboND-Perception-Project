@@ -117,6 +117,21 @@ def pcl_callback(pcl_msg):
         # TODO uncomment in production
         cloud = ros_to_pcl(pcl_msg)
 
+
+    # Remove noise from the both passthrough fitered areas
+    outlier_filter = cloud.make_statistical_outlier_filter()
+
+    # Set the number of neighboring points to analyze for any given point
+    outlier_filter.set_mean_k(10)
+
+    # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
+    outlier_filter.set_std_dev_mul_thresh(1)
+
+    # Remove noise from object are
+    cloud = outlier_filter.filter()
+    # pcl.save(cloud, OUTPUT_PCD_DIRECTORY + "/noise_reduced.pcd")
+    print ("noise filtering done")
+
     # Voxel Grid Downsampling
     vox = cloud.make_voxel_grid_filter()
     LEAF_SIZE = .003
@@ -257,18 +272,6 @@ def pcl_callback(pcl_msg):
     # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
     print("passthrough filtered cloud saved")
 
-    # remove noise from the sample
-    outlier_filter = cloud_filtered.make_statistical_outlier_filter()
-
-    # Set the number of neighboring points to analyze for any given point
-    outlier_filter.set_mean_k(10)
-
-    # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
-    outlier_filter.set_std_dev_mul_thresh(0.5)
-
-    # Finally call the filter function for magic
-    cloud_filtered = outlier_filter.filter()
-    print "noise reduced"
 
     # RANSAC Plane Segmentation
     seg = cloud_filtered.make_segmenter()
@@ -641,7 +644,7 @@ def pcl_callback(pcl_msg):
     #         # afterwhich grasp the object
 
     pcl.save(ros_to_pcl(pcl_msg), "new_cloud.pcd")
-
+    print("saved image of scene")
 
 
 if __name__ == '__main__':
@@ -668,7 +671,7 @@ if __name__ == '__main__':
     get_color_list.color_list = []
 
     # Load Model From disk
-    model = pickle.load(open('object_recognition_models/model5.sav', 'rb'))
+    model = pickle.load(open('object_recognition_models/model6.sav', 'rb'))
     clf = model['classifier']
     encoder = LabelEncoder()
     encoder.classes_ = model['classes']
@@ -684,20 +687,20 @@ if __name__ == '__main__':
     # global right_twist_done
     # global left_twist_done
 
-    if not (right_twist_done and left_twist_done):
-        if not right_twist_done:
-            print("turning right")
-            move_world_joint(-np.math.pi / 2)
-            right_twist_done = True
-            # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
-        #elif not left_twist_done:
-            print("turning left")
-            move_world_joint(np.math.pi / 2)
-            left_twist_done = True
-            # pcl.save(ros_to_pcl(pcl_msg), "left_cloud.pcd")
-        #else:
-            print("returning to 0 orientation")
-            move_world_joint(0)
+    # if not (right_twist_done and left_twist_done):
+    #     if not right_twist_done:
+    #         print("turning right")
+    #         move_world_joint(-np.math.pi / 2)
+    #         right_twist_done = True
+    #         # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
+    #     #elif not left_twist_done:
+    #         print("turning left")
+    #         move_world_joint(np.math.pi / 2)
+    #         left_twist_done = True
+    #         # pcl.save(ros_to_pcl(pcl_msg), "left_cloud.pcd")
+    #     #else:
+    #         print("returning to 0 orientation")
+    #         move_world_joint(0)
 
     # TODO: Spin while node is not shutdown
     while not rospy.is_shutdown():
