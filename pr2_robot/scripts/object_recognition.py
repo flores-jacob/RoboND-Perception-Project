@@ -48,6 +48,9 @@ left_depositbox_cloud = None
 right_twist_done = False
 left_twist_done = False
 
+right_objects_complete = False
+left_objects_complete = False
+
 # Helper function to get surface normals
 def get_normals(cloud):
     get_normals_prox = rospy.ServiceProxy('/feature_extractor/get_normals', GetNormals)
@@ -280,6 +283,24 @@ def pcl_callback(pcl_msg):
         # TODO uncomment in production
         cloud = ros_to_pcl(pcl_msg)
 
+    if WORLD == "challenge":
+        if not right_objects_complete:
+            print("turning right")
+            current_side = "right"
+            move_world_joint(-np.math.pi / 2)
+            # right_twist_done = True
+            # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
+        elif not left_objects_complete:
+            print("turning left")
+            current_side = "left"
+            move_world_joint(np.math.pi / 2)
+            # left_twist_done = True
+            # pcl.save(ros_to_pcl(pcl_msg), "left_cloud.pcd")
+        else:
+            print("returning to 0 orientation")
+            current_side = "front"
+            move_world_joint(0)
+
 
     # Remove noise from the both passthrough fitered areas
     outlier_filter = cloud.make_statistical_outlier_filter()
@@ -502,7 +523,7 @@ def pcl_callback(pcl_msg):
                 centroids.append(computed_centroid)
 
                 test_scene_num = Int32()
-                test_scene_num.data = 3
+                test_scene_num.data = 4
 
                 # Initialize a variable
                 object_name = String()
@@ -739,21 +760,11 @@ if __name__ == '__main__':
     encoder.classes_ = model['classes']
     scaler = model['scaler']
 
-
-    # twist to the left and right
-    # move_world_joint(-np.math.pi/2)
-    # move_world_joint(np.math.pi/2)
-    # move_world_joint(0)
-
-    #
-    # global right_twist_done
-    # global left_twist_done
-
-    if not (right_twist_done and left_twist_done):
-        if not right_twist_done:
-            print("turning right")
-            move_world_joint(-np.math.pi / 2)
-            right_twist_done = True
+    # if not (right_twist_done and left_twist_done):
+    #     if not right_twist_done:
+    #         print("turning right")
+    #         move_world_joint(-np.math.pi / 2)
+    #         right_twist_done = True
     #         # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
     #     #elif not left_twist_done:
     #         print("turning left")
