@@ -51,6 +51,9 @@ left_twist_done = False
 right_objects_complete = False
 left_objects_complete = False
 
+global_detected_object_list_details = []
+global_detected_object_labels = []
+
 # Helper function to get surface normals
 def get_normals(cloud):
     get_normals_prox = rospy.ServiceProxy('/feature_extractor/get_normals', GetNormals)
@@ -232,7 +235,7 @@ def passthrough_filter_challenge_world(pcl_cloud):
     cloud_filtered_middle_list = cloud_filtered_middle_left.to_array().tolist() + cloud_filtered_middle_right.to_array().tolist()
     cloud_filtered_z_top_list = cloud_filtered_z_top.to_array().tolist()
 
-    combined_passthrough_filtered_list = cloud_filtered_bottom_list + cloud_filtered_middle_list + cloud_filtered_z_top_list
+    combined_passthrough_filtered_list = cloud_filtered_middle_list + cloud_filtered_z_top_list
 
     filtered_cloud = pcl.PointCloud_PointXYZRGB()
     filtered_cloud.from_list(combined_passthrough_filtered_list)
@@ -276,6 +279,11 @@ def passthrough_filter_test_world(pcl_cloud):
 # Callback function for your Point Cloud Subscriber
 def pcl_callback(pcl_msg):
     # Exercise-2 TODOs: segment and cluster the objects
+    global right_objects_complete
+    global left_objects_complete
+
+    global global_detected_object_list_details
+    global global_detected_object_labels
 
     if DEV_FLAG == 1:
         cloud = pcl_msg
@@ -286,22 +294,29 @@ def pcl_callback(pcl_msg):
     if WORLD == "challenge":
         if not right_objects_complete:
             print("turning right")
-            current_side = "right"
-            move_world_joint(-np.math.pi / 2)
+            move_complete = move_world_joint(-np.math.pi / 2)
+            if move_complete:
+                current_side = "right"
+            else:
+                current_side = "turning_right"
             # right_twist_done = True
             # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
         elif not left_objects_complete:
             print("turning left")
-            current_side = "left"
-            move_world_joint(np.math.pi / 2)
+            move_complete = move_world_joint(np.math.pi / 2)
+            if move_complete:
+                current_side = "left"
+            else:
+                current_side = "turning_left"
             # left_twist_done = True
             # pcl.save(ros_to_pcl(pcl_msg), "left_cloud.pcd")
         else:
             print("returning to 0 orientation")
-            current_side = "front"
-            move_world_joint(0)
-
-
+            move_complete = move_world_joint(0)
+            if move_complete:
+                current_side = "front"
+            else:
+                current_side = "turning_to_the_front"
     # Remove noise from the both passthrough fitered areas
     outlier_filter = cloud.make_statistical_outlier_filter()
 
@@ -429,6 +444,7 @@ def pcl_callback(pcl_msg):
 
     detected_objects_labels = []
     detected_objects = []
+    unidentified_clusters = 0
 
     for index, pts_list in enumerate(cluster_indices):
         # Grab the points for the cluster
@@ -461,7 +477,10 @@ def pcl_callback(pcl_msg):
         if prediction_confidence > 0.65:
             label = encoder.inverse_transform(prediction)[0]
         else:
-            label = "?"
+            label = "?" + encoder.inverse_transform(prediction)[0] + "?"
+            # add a count to the unidentified clusters
+            unidentified_clusters += 1
+
         detected_objects_labels.append(label)
 
         # Publish a label into RViz
@@ -479,6 +498,24 @@ def pcl_callback(pcl_msg):
         do.label = label
         do.cloud = ros_cluster
         detected_objects.append(do)
+
+    # If the world is a challenge world, all clusters have been identified,
+    # and we're not reidentifying the same set of items
+    # then raise the flags that identification is complete
+    if WORLD == "challenge":
+        if detected_objects and (unidentified_clusters == 0) and (set(global_detected_object_labels) != set(detected_objects_labels)):
+            if current_side == "right":
+                right_objects_complete = True
+                global_detected_object_list_details.extend(detected_objects)
+                global_detected_object_labels = detected_objects_labels
+                print("All objects on the right labeled")
+            elif current_side == "left":
+                left_objects_complete = True
+                global_detected_object_list_details.extend(detected_objects)
+                print("All objects on the left labeled")
+
+        if right_objects_complete and left_objects_complete:
+            detected_objects = global_detected_object_list_details
 
     # Publish the list of detected objects
     rospy.loginfo('Detected {} objects: {}'.format(len(detected_objects_labels), detected_objects_labels))
@@ -605,8 +642,12 @@ def pcl_callback(pcl_msg):
 
     # If items from the pick_list is present, generate the yaml file
     if dict_list:
-        send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
-        print("yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
+        if WORLD == 'test':
+            send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
+            print("TEST WORLD yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
+        elif (WORLD == 'challenge') and right_objects_complete and left_objects_complete:
+            send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
+            print("CHALLENGE WORLD yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
 
     # Suggested location for where to invoke your pr2_mover() function within pcl_callback()
     # Could add some logic to determine whether or not your object detections are robust
@@ -677,7 +718,7 @@ def pcl_callback(pcl_msg):
     # TODO go through all detected objects. If it's the one meant to be moved, make it non-collidable, otherwise,
     # make it collidable
 
-    print("pick routine begin")
+    # print("pick routine begin")
     object_to_pick = None
     for object_item in object_list_param:
 
@@ -686,17 +727,17 @@ def pcl_callback(pcl_msg):
         # clear_octomap = rospy.ServiceProxy('clear_octomap', ClearOctomap)
         # clear_octomap()
 
-        print("looping to assign collision")
+        # print("looping to assign collision")
         # publish all other objects as collidable
         for detected_object in detected_objects:
             #print("looping through each detected_object in detected objects to make collidable or not")
             if object_item['name'] == detected_object.label:
-                print("assigning " + detected_object.label + " as pickable and non collidable")
+                # print("assigning " + detected_object.label + " as pickable and non collidable")
                 object_to_pick = object_dict_items[detected_object.label]
             else:
-                print("collidable " + detected_object.label)
+                # print("collidable " + detected_object.label)
                 collidable_objects_pub.publish(detected_object.cloud)
-        print("colision assignment done")
+        # print("colision assignment done")
         # TODO pick up the object
             # TODO generate the messgage to be sent to the joints
             # TODO publish the list of messages to the joint
@@ -718,7 +759,7 @@ def pcl_callback(pcl_msg):
         #
         #     object_to_pick = None
 
-    print("pick routine done")
+    # print("pick routine done")
 
     # for i in range(len(detected_objects)):
     #     # publish all items after it as collidable
