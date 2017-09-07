@@ -174,20 +174,35 @@ def pcl_callback(pcl_msg):
 
 
     # **************** START filter middle layer *******************
-    passthrough_filter_middle = cloud_filtered.make_passthrough_filter()
+    passthrough_filter_z_middle = cloud_filtered.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
-    passthrough_filter_middle.set_filter_field_name(filter_axis)
+    passthrough_filter_z_middle.set_filter_field_name(filter_axis)
     # middle_axis_min = .6101
     # .6 for test world .5 or 0 for challenge world
-    middle_axis_min = 0.551
+    middle_axis_min = 0.558 # 0.551 works for left and right
     middle_axis_max = 0.775
-    passthrough_filter_middle.set_filter_limits(middle_axis_min, middle_axis_max)
+    passthrough_filter_z_middle.set_filter_limits(middle_axis_min, middle_axis_max)
 
     # Finally use the filter function to obtain the resultant point cloud.
-    cloud_filtered_z_middle = passthrough_filter_middle.filter()
+    cloud_filtered_z_middle = passthrough_filter_z_middle.filter()
 
-    passthrough_filter_y_middle_left = cloud_filtered_z_middle.make_passthrough_filter()
+
+    passthrough_filter_x_middle = cloud_filtered_z_middle.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'x'
+    passthrough_filter_x_middle.set_filter_field_name(filter_axis)
+    # middle_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    middle_axis_min = 0 # 0.551 works for left and right
+    middle_axis_max = .7
+    passthrough_filter_x_middle.set_filter_limits(middle_axis_min, middle_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_x_middle = passthrough_filter_x_middle.filter()
+
+
+    passthrough_filter_y_middle_left = cloud_filtered_x_middle.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
     passthrough_filter_y_middle_left.set_filter_field_name(filter_axis)
@@ -198,7 +213,7 @@ def pcl_callback(pcl_msg):
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_middle_left = passthrough_filter_y_middle_left.filter()
 
-    passthrough_filter_y_middle_right = cloud_filtered_z_middle.make_passthrough_filter()
+    passthrough_filter_y_middle_right = cloud_filtered_x_middle.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
     passthrough_filter_y_middle_right.set_filter_field_name(filter_axis)
