@@ -100,6 +100,26 @@ def pcl_callback(pcl_msg):
         # cloud = ros_to_pcl(pcl_msg)
         pass
 
+
+    pcl.save(cloud, OUTPUT_PCD_DIRECTORY + "/input_cloud.pcd")
+    print ("input cloud saved")
+
+
+    # Remove noise from the both passthrough fitered areas
+    outlier_filter = cloud.make_statistical_outlier_filter()
+
+    # Set the number of neighboring points to analyze for any given point
+    outlier_filter.set_mean_k(10)
+
+    # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
+    outlier_filter.set_std_dev_mul_thresh(1)
+
+    # Remove noise from object are
+    cloud = outlier_filter.filter()
+    pcl.save(cloud, OUTPUT_PCD_DIRECTORY + "/noise_reduced.pcd")
+    print ("noise reduced cloud saved")
+
+
     # Voxel Grid Downsampling
     vox = cloud.make_voxel_grid_filter()
     LEAF_SIZE = .003
@@ -112,6 +132,8 @@ def pcl_callback(pcl_msg):
 
     pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/voxel_downsampled.pcd")
     print("voxel downsampled cloud saved")
+
+
 
     # # PassThrough Filter for z axis to remove table
     # passthrough_z = cloud_filtered.make_passthrough_filter()
@@ -194,7 +216,7 @@ def pcl_callback(pcl_msg):
     passthrough_filter_x_middle.set_filter_field_name(filter_axis)
     # middle_axis_min = .6101
     # .6 for test world .5 or 0 for challenge world
-    middle_axis_min = 0 # 0.551 works for left and right
+    middle_axis_min = -20
     middle_axis_max = .7
     passthrough_filter_x_middle.set_filter_limits(middle_axis_min, middle_axis_max)
 
@@ -271,19 +293,9 @@ def pcl_callback(pcl_msg):
     # pcl.save(cloud_filtered_dropbox, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered_dropbox.pcd")
     # print("passthrough filtered dropbox cloud saved")
 
-    # Remove noise from the both passthrough fitered areas
-    outlier_filter = cloud_filtered.make_statistical_outlier_filter()
 
-    # Set the number of neighboring points to analyze for any given point
-    outlier_filter.set_mean_k(10)
 
-    # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
-    outlier_filter.set_std_dev_mul_thresh(.5)
 
-    # Remove noise from object are
-    cloud_filtered = outlier_filter.filter()
-    pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/noise_reduced.pcd")
-    print ("noise reduced cloud saved")
 
     # # Remove noise from dropbox area
     # dropbox_filter = cloud_filtered_dropbox.make_statistical_outlier_filter()
@@ -424,7 +436,7 @@ def pcl_callback(pcl_msg):
 
 
 if __name__ == '__main__':
-    cloud = pcl.load_XYZRGB('sample_pcd_files/new_cloud.pcd')
+    cloud = pcl.load_XYZRGB('sample_pcd_files/left_cloud.pcd')
 
     get_color_list.color_list = []
 
