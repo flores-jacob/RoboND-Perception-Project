@@ -243,6 +243,49 @@ def passthrough_filter_challenge_world(pcl_cloud):
     return filtered_cloud
 
 
+def passthrough_filter_challenge_world_extract_table(pcl_cloud):
+    # bottom table filter
+    passthrough_filter_bottom_table = pcl_cloud.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_filter_bottom_table.set_filter_field_name(filter_axis)
+    # bottom_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    bottom_axis_min = 0.46
+    bottom_axis_max = 0.557
+    passthrough_filter_bottom_table.set_filter_limits(bottom_axis_min, bottom_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_bottom_table = passthrough_filter_bottom_table.filter()
+
+
+    # top table filter
+    passthrough_filter_top_table = pcl_cloud.make_passthrough_filter()
+    # Assign axis and range to the passthrough filter object.
+    filter_axis = 'z'
+    passthrough_filter_top_table.set_filter_field_name(filter_axis)
+    # bottom_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
+    bottom_axis_min = 0.776
+    bottom_axis_max = 0.825
+    passthrough_filter_top_table.set_filter_limits(bottom_axis_min, bottom_axis_max)
+
+    # Finally use the filter function to obtain the resultant point cloud.
+    cloud_filtered_z_top_table = passthrough_filter_top_table.filter()
+
+    cloud_filtered_z_bottom_table_list = cloud_filtered_z_bottom_table.to_array().tolist()
+    cloud_filtered_z_top_table_list = cloud_filtered_z_top_table.to_array().tolist()
+
+    combined_passthrough_filtered_list = cloud_filtered_z_bottom_table_list + cloud_filtered_z_top_table_list
+
+    filtered_table_cloud = pcl.PointCloud_PointXYZRGB()
+    filtered_table_cloud.from_list(combined_passthrough_filtered_list)
+
+    pcl.save(filtered_table_cloud, OUTPUT_PCD_DIRECTORY + "/table_cloud.pcd")
+
+    return filtered_table_cloud
+
+
 def passthrough_filter_test_world(pcl_cloud):
     # PassThrough Filter for z axis to remove table
     passthrough_z = pcl_cloud.make_passthrough_filter()
@@ -348,7 +391,7 @@ def pcl_callback(pcl_msg):
     if WORLD == "challenge":
         # if the world is the challenge world perform passthrough filtering for challenge worlds
         cloud_objects = passthrough_filter_challenge_world(cloud_filtered)
-        cloud_table = None
+        cloud_table = passthrough_filter_challenge_world_extract_table(cloud_filtered)
         # pcl.save(cloud_objects, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
         print("passthrough filtering done")
 
