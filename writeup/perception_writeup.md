@@ -36,7 +36,7 @@
 You're reading it!
 
 ### Exercise 1, 2 and 3 pipeline implemented
-#### 1. Complete Exercise 1 steps. Pipeline for filtering and RANSAC plane fitting implemented.
+#### 1. Complete Exercise 1 and 2 steps. Pipeline for filtering, RANSAC plane fitting, segmentation, and clustering implemented.
 
 Voxel downsampling, passthrough filtering, RANSAC plane segmentation, and Euclidean clustering were all performed on a 
 sample pcl cloud data, in the aforementioned order.  The code can be found in 
@@ -82,13 +82,21 @@ that is closest to it, and that each cluster comprise an object of interest on t
 ##### Color coding clusters
 We color code each point to show which cluster it belongs to
 
-![cluster](./images/ex1/cluster.png)
+![colored-clusters](./images/ex1/cluster.png)
 
-
-#### 2. Complete Exercise 2 steps: Pipeline including clustering for segmentation implemented.  
 
 #### 2. Complete Exercise 3 Steps.  Features extracted and SVM trained.  Object recognition implemented.
-Here is an example of how to include an image in your writeup.
+For exercise 3, we: 
+1. Generate training sets by capturing color and normal historgrams of objects.  The script used in this instance can be
+found at `RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/capture_features.py`. In this instance, we 
+iterated 100 times for each object. The resultant training set can be found at 
+`RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/training_sets/training_set_complete_100_with_dropbox.sav`. 
+2. Once training sets have been generated, we proceed to train our models using these.  The training script used can be 
+found at `RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/train_svm.py` and the resulting model can be found 
+at `RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/models/model_100_with_dropbox.sav`. The resultant 
+confusion matrices are shown below
+
+
 
 ![demo-1](https://user-images.githubusercontent.com/20687560/28748231-46b5b912-7467-11e7-8778-3095172b7b19.png)
 
@@ -100,6 +108,4 @@ And here's another image!
 ![demo-2](https://user-images.githubusercontent.com/20687560/28748286-9f65680e-7468-11e7-83dc-f1a32380b89c.png)
 
 Spend some time at the end to discuss your code, what techniques you used, what worked and why, where the implementation might fail and how you might improve it if you were going to pursue this project further.  
-
-
 
