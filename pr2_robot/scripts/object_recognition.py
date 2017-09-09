@@ -31,14 +31,15 @@ from std_msgs.msg import Int32
 from std_msgs.msg import String
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Point
-
 # imports for arm movement
 from sensor_msgs.msg import JointState
+# import for clearing of octomap or collision cloud
+from std_srvs.srv import Empty
 
 DEV_FLAG = 0
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
 
-WORLD = "challenge"
+WORLD = "test"
 
 # initialize deposit box variables
 right_depositbox_cloud = None
@@ -754,31 +755,39 @@ def pcl_callback(pcl_msg):
     #     move_world_joint(move)
 
 
-    # publish table to /pr2/3D_map/points to declare it as collidable
-    if cloud_table:
-        collidable_objects_pub.publish(ros_cloud_table)
-
     # TODO go through all detected objects. If it's the one meant to be moved, make it non-collidable, otherwise,
     # make it collidable
 
     # print("pick routine begin")
     object_to_pick = None
     for object_item in object_list_param:
+        # Empty the collision map
+        rospy.wait_for_service('/clear_octomap')
 
-        # clear the collision map
-        # rospy.wait_for_service('clear_octomap')
-        # clear_octomap = rospy.ServiceProxy('clear_octomap', ClearOctomap)
-        # clear_octomap()
+        try:
+            # https://answers.ros.org/question/12793/rospy-calling-clear-service-programatically/?answer=18877#post-id-18877
+            clear_collision_map_proxy = rospy.ServiceProxy('/clear_octomap', Empty)
+
+            resp = clear_collision_map_proxy()
+
+            print ("Response: ", resp)
+
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
+
+        # publish table to /pr2/3D_map/points to declare it as collidable
+        if cloud_table:
+            collidable_objects_pub.publish(ros_cloud_table)
 
         # print("looping to assign collision")
         # publish all other objects as collidable
         for detected_object in detected_objects:
             #print("looping through each detected_object in detected objects to make collidable or not")
             if object_item['name'] == detected_object.label:
-                # print("assigning " + detected_object.label + " as pickable and non collidable")
+                print("assigning " + detected_object.label + " as pickable and non collidable")
                 object_to_pick = object_dict_items[detected_object.label]
             else:
-                # print("collidable " + detected_object.label)
+                print("collidable " + detected_object.label)
                 collidable_objects_pub.publish(detected_object.cloud)
         # print("colision assignment done")
         # TODO pick up the object
@@ -838,7 +847,7 @@ if __name__ == '__main__':
     get_color_list.color_list = []
 
     # Load Model From disk
-    model = pickle.load(open('object_recognition_models/model6.sav', 'rb'))
+    model = pickle.load(open('object_recognition_models/model.sav', 'rb'))
     clf = model['classifier']
     encoder = LabelEncoder()
     encoder.classes_ = model['classes']
