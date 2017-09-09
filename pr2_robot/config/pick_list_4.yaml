@@ -1,12 +1,12 @@
 object_list:
   - name: sticky_notes
-    group: red
+    group: green
   - name: book
     group: red
   - name: snacks
     group: green
   - name: biscuits
-    group: green
+    group: red
   - name: eraser
     group: red
   - name: soap2
