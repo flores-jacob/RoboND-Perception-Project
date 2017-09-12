@@ -323,7 +323,7 @@ def passthrough_filter_test_world(pcl_cloud):
     return filtered_cloud
 
 
-def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.05, place_position_vertical_coefficient=0.07):
+def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.05, place_position_vertical_coefficient=0.1):
     # compute horizontal adjustment
     if (item_number_for_group % 3) == 1:
         horizontal_adjustment = - (item_number_for_group * place_position_horizontal_coefficient)
@@ -613,7 +613,7 @@ def pcl_callback(pcl_msg):
     first_dropbox_group_count = 0
     second_dropbox_group_count = 0
 
-    place_position_vertical_coefficient = .07
+    place_position_vertical_coefficient = .1
     place_position_horizontal_coefficient = .05
 
     for i in range(len(object_list_param)):
@@ -883,7 +883,7 @@ if __name__ == '__main__':
 
 
     # TODO: Create Subscribers
-    pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2, pcl_callback, queue_size=1)
+    pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2, pcl_callback, queue_size=5)
 
     # Initialize color_list
     get_color_list.color_list = []
