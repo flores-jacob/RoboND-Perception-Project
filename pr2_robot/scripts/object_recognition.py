@@ -333,8 +333,7 @@ def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_
         horizontal_adjustment = 0
 
     # compute for vertical adjustment
-
-    layer = math.floor((item_number_for_group)/2)
+    layer = math.ceil((item_number_for_group + 1)/2)
 
     vertical_adjustment = -(layer * place_position_vertical_coefficient)
 
