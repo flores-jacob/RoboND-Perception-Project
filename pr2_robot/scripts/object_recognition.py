@@ -333,7 +333,8 @@ def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_
         horizontal_adjustment = 0
 
     # compute for vertical adjustment
-    layer = math.floor(item_number_for_group/2)
+
+    layer = math.floor((item_number_for_group)/2)
 
     vertical_adjustment = -(layer * place_position_vertical_coefficient)
 
@@ -782,11 +783,9 @@ def pcl_callback(pcl_msg):
     #     move_world_joint(move)
 
 
-    # TODO go through all detected objects. If it's the one meant to be moved, make it non-collidable, otherwise,
-    # make it collidable
-
     # print("pick routine begin")
     object_to_pick = None
+    collision_map_pcl_list_form = []
     for object_item in object_list_param:
         # Empty the collision map
         rospy.wait_for_service('/clear_octomap')
@@ -794,40 +793,35 @@ def pcl_callback(pcl_msg):
         # TODO clear the octomap, combine all collidable objects before publishing
         try:
             # https://answers.ros.org/question/12793/rospy-calling-clear-service-programatically/?answer=18877#post-id-18877
-            # clear_collision_map_proxy = rospy.ServiceProxy('/clear_octomap', Empty)
-            #
-            # resp = clear_collision_map_proxy()
-            #
-            # print ("Response: ", resp)
+            clear_collision_map_proxy = rospy.ServiceProxy('/clear_octomap', Empty)
+
+            resp = clear_collision_map_proxy()
+
+            print ("Response: ", resp)
             pass
 
         except rospy.ServiceException, e:
             print "Service call failed: %s" % e
 
-        # # publish table to /pr2/3D_map/points to declare it as collidable
-        # if cloud_table:
-        #     # publish multiple times to make sure that data gets published
-        #     for i in range(5):
-        #         collidable_objects_pub.publish(ros_cloud_table)
-        #         print("table published")
-
-        collidable_objects_pub.publish(ros_cloud_table)
+        collision_map_pcl_list_form += cloud_table.to_array().tolist()
 
         # print("looping to assign collision")
         # publish all other objects as collidable
         for detected_object in detected_objects:
-            #print("looping through each detected_object in detected objects to make collidable or not")
             if object_item['name'] == detected_object.label:
                 print("assigning " + detected_object.label + " as pickable and non collidable")
                 object_to_pick = object_dict_items[detected_object.label]
             else:
                 print("collidable " + detected_object.label)
-                # publish multiple times to make sure that data gets published
-                for i in range(5):
-                    collidable_objects_pub.publish(detected_object.cloud)
+                # collidable_objects_pub.publish(detected_object.cloud)
+                collision_map_pcl_list_form += ros_to_pcl(detected_object.cloud).to_array().tolist()
+
+        collision_map_pcl = pcl.PointCloud_PointXYZRGB()
+        collision_map_pcl.from_list(collision_map_pcl_list_form)
+        collision_map_ros = pcl_to_ros(collision_map_pcl)
+        collidable_objects_pub.publish(collision_map_ros)
 
         # sleep to wait for data to publish
-        time.sleep(10)
 
         # print("colision assignment done")
         # TODO pick up the object
