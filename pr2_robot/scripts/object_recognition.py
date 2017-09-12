@@ -323,7 +323,7 @@ def passthrough_filter_test_world(pcl_cloud):
     return filtered_cloud
 
 
-def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.025, place_position_vertical_coefficient=0.05):
+def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.025, place_position_vertical_coefficient=0.06):
     # compute horizontal adjustment
     if (item_number_for_group % 2) == 1:
         horizontal_adjustment = - (item_number_for_group * place_position_horizontal_coefficient)
@@ -608,7 +608,7 @@ def pcl_callback(pcl_msg):
     first_dropbox_group_count = 0
     second_dropbox_group_count = 0
 
-    place_position_vertical_coefficient = .05
+    place_position_vertical_coefficient = .06
     place_position_horizontal_coefficient = .025
 
     for i in range(len(object_list_param)):
@@ -792,11 +792,11 @@ def pcl_callback(pcl_msg):
         # TODO clear the octomap, combine all collidable objects before publishing
         try:
             # https://answers.ros.org/question/12793/rospy-calling-clear-service-programatically/?answer=18877#post-id-18877
-            clear_collision_map_proxy = rospy.ServiceProxy('/clear_octomap', Empty)
-
-            resp = clear_collision_map_proxy()
-
-            print ("Response: ", resp)
+            # clear_collision_map_proxy = rospy.ServiceProxy('/clear_octomap', Empty)
+            #
+            # resp = clear_collision_map_proxy()
+            #
+            # print ("Response: ", resp)
             pass
 
         except rospy.ServiceException, e:
@@ -810,6 +810,7 @@ def pcl_callback(pcl_msg):
             if object_item['name'] == detected_object.label:
                 print("assigning " + detected_object.label + " as pickable and non collidable")
                 object_to_pick = object_dict_items[detected_object.label]
+                pcl.save(ros_to_pcl(detected_object.cloud), "./object_to_pick/" + detected_object.label + ".pcd")
             else:
                 print("collidable " + detected_object.label)
                 # collidable_objects_pub.publish(detected_object.cloud)
