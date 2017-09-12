@@ -1,19 +1,5 @@
 ## Project: Perception Pick & Place
-### Writeup Template: You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
 
----
-
-
-# Required Steps for a Passing Submission:
-1. Extract features and train an SVM model on new objects (see `pick_list_*.yaml` in `/pr2_robot/config/` for the list of models you'll be trying to identify). 
-2. Write a ROS node and subscribe to `/pr2/world/points` topic. This topic contains noisy point cloud data that you must work with.
-3. Use filtering and RANSAC plane fitting to isolate the objects of interest from the rest of the scene.
-4. Apply Euclidean clustering to create separate clusters for individual items.
-5. Perform object recognition on these objects and assign them labels (markers in RViz).
-6. Calculate the centroid (average in x, y and z) of the set of points belonging to that each object.
-7. Create ROS messages containing the details of each object (name, pick_pose, etc.) and write these messages out to `.yaml` files, one for each of the 3 scenarios (`test1-3.world` in `/pr2_robot/worlds/`).  [See the example `output.yaml` for details on what the output should look like.](https://github.com/udacity/RoboND-Perception-Project/blob/master/pr2_robot/config/output.yaml)  
-8. Submit a link to your GitHub repo for the project or the Python code for your perception pipeline and your output `.yaml` files (3 `.yaml` files, one for each test world).  You must have correctly identified 100% of objects from `pick_list_1.yaml` for `test1.world`, 80% of items from `pick_list_2.yaml` for `test2.world` and 75% of items from `pick_list_3.yaml` in `test3.world`.
-9. Congratulations!  Your Done!
 
 # Extra Challenges: Complete the Pick & Place
 7. To create a collision map, publish a point cloud to the `/pr2/3d_map/points` topic and make sure you change the `point_cloud_topic` to `/pr2/3d_map/points` in `sensors.yaml` in the `/pr2_robot/config/` directory. This topic is read by Moveit!, which uses this point cloud input to generate a collision map, allowing the robot to plan its trajectory.  Keep in mind that later when you go to pick up an object, you must first remove it from this point cloud so it is removed from the collision map!
@@ -29,11 +15,6 @@
 
 ---
 ### Writeup / README
-
-#### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.
-  
-
-You're reading it!
 
 ### Exercise 1, 2 and 3 pipeline implemented
 #### 1. Complete Exercise 1 and 2 steps. Pipeline for filtering, RANSAC plane fitting, segmentation, and clustering implemented.
@@ -89,23 +70,48 @@ We color code each point to show which cluster it belongs to
 For exercise 3, we: 
 1. Generate training sets by capturing color and normal historgrams of objects.  The script used in this instance can be
 found at `RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/capture_features.py`. In this instance, we 
-iterated 100 times for each object. The resultant training set can be found at 
-`RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/training_sets/training_set_complete_100_with_dropbox.sav`. 
+iterated 50 times for each object. The resultant training set can be found at 
+`RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/training_sets/training_set_complete_50.sav`. 
 2. Once training sets have been generated, we proceed to train our models using these.  The training script used can be 
 found at `RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/train_svm.py` and the resulting model can be found 
-at `RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/models/model_100_with_dropbox.sav`. The resultant 
-confusion matrices are shown below
+at `RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/models/model.sav`. The resultant confusion matrices are 
+shown below
 
+Confusion Matrix
+![confusion-matrix](./images/ex3/Figure_1.png)
 
+Normalized Confusion Matrix
+![normalized-confusion-matrix](./images/ex3/Figure_2.png)
 
-![demo-1](https://user-images.githubusercontent.com/20687560/28748231-46b5b912-7467-11e7-8778-3095172b7b19.png)
 
 ### Pick and Place Setup
 
 #### 1. For all three tabletop setups (`test*.world`), perform object recognition, then read in respective pick list (`pick_list_*.yaml`). Next construct the messages that would comprise a valid `PickPlace` request output them to `.yaml` format.
 
-And here's another image! 
-![demo-2](https://user-images.githubusercontent.com/20687560/28748286-9f65680e-7468-11e7-83dc-f1a32380b89c.png)
+The object recognition code can be found in
+```
+RoboND-Perception-Project/pr2_robot/scripts/object_recognition.py
+```
 
-Spend some time at the end to discuss your code, what techniques you used, what worked and why, where the implementation might fail and how you might improve it if you were going to pursue this project further.  
 
+The output yaml files are:
+
+```
+RoboND-Perception-Project/ros_independent_src/output_yaml/output_1.yaml
+RoboND-Perception-Project/ros_independent_src/output_yaml/output_2.yaml
+RoboND-Perception-Project/ros_independent_src/output_yaml/output_3.yaml
+RoboND-Perception-Project/ros_independent_src/output_yaml/output_4.yaml
+```
+
+Most of the code has been lifted from the exercises.  The major departures from the exercises involve code dealing with the object recognition for the challenge world to generate output4.yaml.  The most notable of these differences involve the intensive use of passthrough filters for the challenge world, to ensure that there are no anomalous artifacts when segmenting objects. RANSAC plane segmentation was also not used in the challenge world. Instead, to obtain the pcl and ros cloud of the table surfaces for the challenge world, we created multiple passthrough filters that encompass the table surfaces,which we then combined later on. Below, we restate the different techniques we use, and some observations.  
+
+1. Statistical outlier filtering (noise filtering) - for effective noise filtering, it seems it is best to do the filtering at the very beginning, even before doing voxed downsampling.  The algorithm has an easier time removing point cloud outliers when non-noise points are at their densest.
+2. Voxel downsampling - for better object recognition effectivity, it may be best to have less downsampling. Although this will have to be balanced with the processing capacity of the host machine.  Point clouds that are too dense may consume too much processing cycles.
+3. Passthrough filtering - Partitioning pointclouds using this technique, and recombining them later on, has proven to be a very handy tool in isolating areas of interest and removing artifacts. If the environment we are working with is fairly fixed, using passthrough filtering to reduce scene complexity is fairly effective.  The downside however is if the opposite were true, that is, if the environment is dynamic, and there are no static areas. In these instances, this method may instead "chop up" the point cloud in the wrong places. It may, however, be possible to programmatically and dynamically determine which areas to passthrough filter, so it may still have utility even if the environment is dynamic. 
+4. RANSAC plane segmentation - the implementation from the exercises only allows for the segmentation of a single identified plane from a point cloud. For future implementations, we can explore how to identify and segment multiple planes from a single point cloud. We can also explore how segmentation of other geometric shapes can be done using this technique.
+5. Euclidan Clustering
+6. Histogram generation for color and shape(normals) features - an attempt was made to generate training sets based only on shape and colors of the objects.  Training sets using only the object colors was still able to produce a normalized confusion matrix with values greater than 90%.  On the other hand, training sets using only normals(shape) failed to produce workable results. This may have been caused by the limited number of "buckets" used, which was at 20.  Maybe larger values can produce better results.
+7. Model generation using a Support Vector Machine - we used the rbf kernel, with the setting `probability=True`. The rbf kernel produced better results than the linear kernel.  With the `probability=True` setting, we are also able to check the degree of confidence of the performed object recognition.
+8. Object recognition using the aforementioned model
+9. Collision map generation - we use the clear_octomap service to periodically clear the collision map, and then repopulate it for each object.
+10. Pick place operation - some config files were adjusted to try to get the arm to actually pick the objects.  Although it may be possible the cause of the objects "slipping" from the gripper is the fact that object orientation data is needed to be supplied, apart from the object position. Further refinement of place pose assignment could also be done.
