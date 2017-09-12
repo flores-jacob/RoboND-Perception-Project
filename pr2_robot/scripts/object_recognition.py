@@ -36,6 +36,9 @@ from sensor_msgs.msg import JointState
 # import for clearing of octomap or collision cloud
 from std_srvs.srv import Empty
 
+import math
+import time
+
 DEV_FLAG = 0
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
 
@@ -320,6 +323,23 @@ def passthrough_filter_test_world(pcl_cloud):
     return filtered_cloud
 
 
+def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.025, place_position_vertical_coefficient=0.05):
+    # compute horizontal adjustment
+    if (item_number_for_group % 2) == 1:
+        horizontal_adjustment = - (item_number_for_group * place_position_horizontal_coefficient)
+    elif (item_number_for_group % 2) == 0:
+        horizontal_adjustment = (item_number_for_group * place_position_horizontal_coefficient)
+    else:
+        horizontal_adjustment = 0
+
+    # compute for vertical adjustment
+    layer = math.floor(item_number_for_group/2)
+
+    vertical_adjustment = -(layer * place_position_vertical_coefficient)
+
+    return horizontal_adjustment, vertical_adjustment
+
+
 # Callback function for your Point Cloud Subscriber
 def pcl_callback(pcl_msg):
     # Exercise-2 TODOs: segment and cluster the objects
@@ -588,7 +608,8 @@ def pcl_callback(pcl_msg):
     first_dropbox_group_count = 0
     second_dropbox_group_count = 0
 
-    place_position_coefficient = .025
+    place_position_vertical_coefficient = .05
+    place_position_horizontal_coefficient = .025
 
     for i in range(len(object_list_param)):
         object_name = object_list_param[i]['name']
@@ -604,7 +625,7 @@ def pcl_callback(pcl_msg):
                 centroids.append(computed_centroid)
 
                 test_scene_num = Int32()
-                test_scene_num.data = 4
+                test_scene_num.data = 3
 
                 # Initialize a variable
                 object_name = String()
@@ -626,10 +647,13 @@ def pcl_callback(pcl_msg):
                 if object_group == dropbox[0]['group']:
                     first_dropbox_group_count += 1
 
+                    # compute horizontal and vertical adjustment for place pose
+                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(first_dropbox_group_count, place_position_horizontal_coefficient, place_position_vertical_coefficient)
+
                     place_position = Point()
 
-                    place_position.x = dropbox[0]['position'][0] - (first_dropbox_group_count * place_position_coefficient)
-                    place_position.y = dropbox[0]['position'][1]
+                    place_position.x = dropbox[0]['position'][0] + vertical_adjustment
+                    place_position.y = dropbox[0]['position'][1] + horizontal_adjustment
                     place_position.z = dropbox[0]['position'][2]
 
                     place_pose.position = place_position
@@ -638,10 +662,13 @@ def pcl_callback(pcl_msg):
                 elif object_group == dropbox[1]['group']:
                     second_dropbox_group_count += 1
 
+                    # compute horizontal and vertical adjustment for place pose
+                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(second_dropbox_group_count, place_position_horizontal_coefficient, place_position_vertical_coefficient)
+
                     place_position = Point()
 
-                    place_position.x = dropbox[1]['position'][0] - (second_dropbox_group_count * place_position_coefficient)
-                    place_position.y = dropbox[1]['position'][1]
+                    place_position.x = dropbox[1]['position'][0] + vertical_adjustment
+                    place_position.y = dropbox[1]['position'][1] + horizontal_adjustment
                     place_position.z = dropbox[1]['position'][2]
 
                     place_pose.position = place_position
@@ -764,20 +791,27 @@ def pcl_callback(pcl_msg):
         # Empty the collision map
         rospy.wait_for_service('/clear_octomap')
 
+        # TODO clear the octomap, combine all collidable objects before publishing
         try:
             # https://answers.ros.org/question/12793/rospy-calling-clear-service-programatically/?answer=18877#post-id-18877
-            clear_collision_map_proxy = rospy.ServiceProxy('/clear_octomap', Empty)
-
-            resp = clear_collision_map_proxy()
-
-            print ("Response: ", resp)
+            # clear_collision_map_proxy = rospy.ServiceProxy('/clear_octomap', Empty)
+            #
+            # resp = clear_collision_map_proxy()
+            #
+            # print ("Response: ", resp)
+            pass
 
         except rospy.ServiceException, e:
             print "Service call failed: %s" % e
 
-        # publish table to /pr2/3D_map/points to declare it as collidable
-        if cloud_table:
-            collidable_objects_pub.publish(ros_cloud_table)
+        # # publish table to /pr2/3D_map/points to declare it as collidable
+        # if cloud_table:
+        #     # publish multiple times to make sure that data gets published
+        #     for i in range(5):
+        #         collidable_objects_pub.publish(ros_cloud_table)
+        #         print("table published")
+
+        collidable_objects_pub.publish(ros_cloud_table)
 
         # print("looping to assign collision")
         # publish all other objects as collidable
@@ -788,28 +822,34 @@ def pcl_callback(pcl_msg):
                 object_to_pick = object_dict_items[detected_object.label]
             else:
                 print("collidable " + detected_object.label)
-                collidable_objects_pub.publish(detected_object.cloud)
+                # publish multiple times to make sure that data gets published
+                for i in range(5):
+                    collidable_objects_pub.publish(detected_object.cloud)
+
+        # sleep to wait for data to publish
+        time.sleep(10)
+
         # print("colision assignment done")
         # TODO pick up the object
             # TODO generate the messgage to be sent to the joints
             # TODO publish the list of messages to the joint
 
-        # if object_to_pick is not None:
-        #     print("picking up " + object_to_pick["object_name"].data)
-        #     rospy.wait_for_service('pick_place_routine')
-        #
-        #     try:
-        #         pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
-        #
-        #         resp = pick_place_routine(object_to_pick["test_scene_num"], object_to_pick["object_name"], object_to_pick["arm_name"], object_to_pick["pick_pose"],
-        #                                   object_to_pick["place_pose"])
-        #
-        #         print ("Response: ", resp.success)
-        #
-        #     except rospy.ServiceException, e:
-        #         print "Service call failed: %s" % e
-        #
-        #     object_to_pick = None
+        if object_to_pick is not None:
+            print("picking up " + object_to_pick["object_name"].data)
+            rospy.wait_for_service('pick_place_routine')
+
+            try:
+                pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
+
+                resp = pick_place_routine(object_to_pick["test_scene_num"], object_to_pick["object_name"], object_to_pick["arm_name"], object_to_pick["pick_pose"],
+                                          object_to_pick["place_pose"])
+
+                print ("Response: ", resp.success)
+
+            except rospy.ServiceException, e:
+                print "Service call failed: %s" % e
+
+            object_to_pick = None
 
     # print("pick routine done")
 
