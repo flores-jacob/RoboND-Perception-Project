@@ -323,7 +323,7 @@ def passthrough_filter_test_world(pcl_cloud):
     return filtered_cloud
 
 
-def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.03, place_position_vertical_coefficient=0.06):
+def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.03, place_position_vertical_coefficient=0.07):
     # compute horizontal adjustment
     if (item_number_for_group % 3) == 1:
         horizontal_adjustment = - (item_number_for_group * place_position_horizontal_coefficient)
@@ -338,6 +338,8 @@ def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_
     layer = math.ceil((item_number_for_group)/3)
 
     vertical_adjustment = -(layer * place_position_vertical_coefficient)
+    if vertical_adjustment <= -1:
+        vertical_adjustment = -0.9
 
     return horizontal_adjustment, vertical_adjustment
 
@@ -543,9 +545,10 @@ def pcl_callback(pcl_msg):
         if prediction_confidence > 0.65:
             label = encoder.inverse_transform(prediction)[0]
         else:
-            label = "?" + encoder.inverse_transform(prediction)[0] + "?"
+            label = encoder.inverse_transform(prediction)[0]
             # add a count to the unidentified clusters
             unidentified_clusters += 1
+            print("not sure if this is really a " + label)
 
         detected_objects_labels.append(label)
 
@@ -798,12 +801,10 @@ def pcl_callback(pcl_msg):
         # TODO clear the octomap, combine all collidable objects before publishing
         try:
             # https://answers.ros.org/question/12793/rospy-calling-clear-service-programatically/?answer=18877#post-id-18877
-            # clear_collision_map_proxy = rospy.ServiceProxy('/clear_octomap', Empty)
-            #
-            # resp = clear_collision_map_proxy()
-            #
-            # print ("Response: ", resp)
-            pass
+            clear_collision_map_proxy = rospy.ServiceProxy('/clear_octomap', Empty)
+            resp = clear_collision_map_proxy()
+
+            print ("Response: ", resp)
 
         except rospy.ServiceException, e:
             print "Service call failed: %s" % e
@@ -870,9 +871,6 @@ if __name__ == '__main__':
     # world_joint_publisher
     world_joint_controller_pub = rospy.Publisher("/pr2/world_joint_controller/command", Float64, queue_size=20)
 
-    # TODO: Create Subscribers
-    pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2, pcl_callback, queue_size=1)
-
     # TODO: Create Publishers
     pcl_objects_pub = rospy.Publisher("/pcl_objects", PointCloud2, queue_size=1)
     pcl_table_pub = rospy.Publisher("/pcl_table", PointCloud2, queue_size=1)
@@ -880,8 +878,12 @@ if __name__ == '__main__':
     object_markers_pub = rospy.Publisher("/object_markers", Marker, queue_size=1)
     detected_objects_pub = rospy.Publisher("/detected_objects", PointCloud2, queue_size=1)
 
-    # colldable object publisher
-    collidable_objects_pub = rospy.Publisher("/pr2/3D_map/points", PointCloud2, queue_size=1)
+    # collidable object publisher
+    collidable_objects_pub = rospy.Publisher("/pr2/3D_map/points", PointCloud2, queue_size=20)
+
+
+    # TODO: Create Subscribers
+    pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2, pcl_callback, queue_size=1)
 
     # Initialize color_list
     get_color_list.color_list = []
