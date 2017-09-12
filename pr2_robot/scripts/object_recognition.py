@@ -323,7 +323,7 @@ def passthrough_filter_test_world(pcl_cloud):
     return filtered_cloud
 
 
-def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.03, place_position_vertical_coefficient=0.07):
+def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.05, place_position_vertical_coefficient=0.07):
     # compute horizontal adjustment
     if (item_number_for_group % 3) == 1:
         horizontal_adjustment = - (item_number_for_group * place_position_horizontal_coefficient)
@@ -614,7 +614,7 @@ def pcl_callback(pcl_msg):
     second_dropbox_group_count = 0
 
     place_position_vertical_coefficient = .07
-    place_position_horizontal_coefficient = .025
+    place_position_horizontal_coefficient = .05
 
     for i in range(len(object_list_param)):
         object_name = object_list_param[i]['name']
@@ -796,12 +796,12 @@ def pcl_callback(pcl_msg):
     collision_map_pcl_list_form = []
     for object_item in object_list_param:
         # Empty the collision map
-        rospy.wait_for_service('/clear_octomap')
+        rospy.wait_for_service('clear_octomap')
 
         # TODO clear the octomap, combine all collidable objects before publishing
         try:
             # https://answers.ros.org/question/12793/rospy-calling-clear-service-programatically/?answer=18877#post-id-18877
-            clear_collision_map_proxy = rospy.ServiceProxy('/clear_octomap', Empty)
+            clear_collision_map_proxy = rospy.ServiceProxy('clear_octomap', Empty)
             resp = clear_collision_map_proxy()
 
             print ("Response: ", resp)
