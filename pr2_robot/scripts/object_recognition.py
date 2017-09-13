@@ -47,6 +47,8 @@ WORLD_setting = "test1"  # set to "test1" for test1.WORLD_setting and pick_list1
                 # set to "test3" for test3.WORLD_setting and pick_list3.yaml
                 # set to "challenge" for challenge.WORLD_setting and pick_list4.yaml
 
+ENABLE_PICK_PLACE_ROUTINE = False
+
 if WORLD_setting == "test1":
     TEST_SCENE_NUM = 1
     WORLD = "test"
@@ -352,7 +354,7 @@ def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_
         horizontal_adjustment = 0
 
     # compute for vertical adjustment
-    layer = math.ceil((item_number_for_group)/3)
+    layer = math.ceil((item_number_for_group)/3.0)
 
     vertical_adjustment = -(layer * place_position_vertical_coefficient)
     if vertical_adjustment <= -1:
@@ -845,14 +847,8 @@ def pcl_callback(pcl_msg):
         collision_map_ros = pcl_to_ros(collision_map_pcl)
         collidable_objects_pub.publish(collision_map_ros)
 
-        # sleep to wait for data to publish
-
-        # print("colision assignment done")
-        # TODO pick up the object
-            # TODO generate the messgage to be sent to the joints
-            # TODO publish the list of messages to the joint
-
-        if object_to_pick is not None:
+        # Proceed to pick if we have an object to pick, if pick place routine is enabled, and the world is a test world
+        if (object_to_pick is not None) and ENABLE_PICK_PLACE_ROUTINE and (WORLD == "test"):
             print("picking up " + object_to_pick["object_name"].data)
             rospy.wait_for_service('pick_place_routine')
 
