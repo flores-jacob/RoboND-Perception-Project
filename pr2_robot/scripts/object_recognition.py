@@ -42,21 +42,26 @@ import time
 DEV_FLAG = 0
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
 
-WORLD = "test1"  # set to "test1" for test1.world and pick_list1.yaml
-                # set to "test2" for test2.world and pick_list2.yaml
-                # set to "test3" for test3.world and pick_list3.yaml
-                # set to "challenge" for challenge.world and pick_list4.yaml
+WORLD_setting = "test1"  # set to "test1" for test1.WORLD_setting and pick_list1.yaml
+                # set to "test2" for test2.WORLD_setting and pick_list2.yaml
+                # set to "test3" for test3.WORLD_setting and pick_list3.yaml
+                # set to "challenge" for challenge.WORLD_setting and pick_list4.yaml
 
-if WORLD == "test1":
+if WORLD_setting == "test1":
     TEST_SCENE_NUM = 1
-elif WORLD == "test2":
+    WORLD = "test"
+elif WORLD_setting == "test2":
     TEST_SCENE_NUM = 2
-elif WORLD == "test3":
+    WORLD = "test"
+elif WORLD_setting == "test3":
     TEST_SCENE_NUM = 3
-elif WORLD == "challenge":
+    WORLD = "test"
+elif WORLD_setting == "challenge":
     TEST_SCENE_NUM = 4
+    WORLD = "challenge"
 else:
     TEST_SCENE_NUM = None
+    WORLD = None
 
 # initialize deposit box variables
 right_depositbox_cloud = None
@@ -895,7 +900,7 @@ if __name__ == '__main__':
 
 
     # TODO: Create Subscribers
-    pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2, pcl_callback, queue_size=5)
+    pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2, pcl_callback, queue_size=1)
 
     # Initialize color_list
     get_color_list.color_list = []
