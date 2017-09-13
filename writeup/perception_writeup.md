@@ -13,6 +13,15 @@
 ## [Rubric](https://review.udacity.com/#!/rubrics/1067/view) Points
 ### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
 
+
+#### How to run the code
+1. Modify the file `/home/robond/catkin_ws/src/RoboND-Perception-Project/pr2_robot/launch/pick_place_project.launch` and set the world name to either `test1.world`, `test2.world`, `test3.world`, or `challenge.world`.
+
+2. 
+
+
+
+
 ---
 ### Writeup / README
 
@@ -92,6 +101,8 @@ The object recognition code can be found in
 ```
 RoboND-Perception-Project/pr2_robot/scripts/object_recognition.py
 ```
+
+Below are the images for the labeled items in the three different test worlds
 
 
 The output yaml files are:
