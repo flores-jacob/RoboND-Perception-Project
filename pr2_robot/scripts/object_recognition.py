@@ -363,6 +363,50 @@ def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_
     return horizontal_adjustment, vertical_adjustment
 
 
+def compute_challenge_world_place_pose(item_number_for_group, y_coefficient=0.3, reverse_y=False):
+
+    # this first object for the arm is placed on these coordinates
+    if item_number_for_group == 1:
+        # placed on the top front table
+        xpos = 0.8
+        # placed a bit off from the center  of the table, towards the left
+        ypos = 1 * y_coefficient
+        # placed on the top front table
+        zpos = 0.9
+    # this second object for the arm is placed on these coordinates
+    elif item_number_for_group == 2:
+        # placed on the top front table
+        xpos = 0.8
+        # placed a bit off from the center  of the table, towards the left
+        ypos = 2 * y_coefficient
+        # placed on the top front table
+        zpos = 0.9
+    elif item_number_for_group == 3:
+        # placed on the bottom front table
+        xpos = 0.45
+        # placed a bit off from the center  of the table, towards the left
+        ypos = 1 * y_coefficient
+        # placed on the bottom front table
+        zpos = 0.6
+    elif item_number_for_group == 4:
+        # placed on the bottom front table
+        xpos = 0.45
+        # placed a bit off from the center  of the table, towards the left
+        ypos = 2 * y_coefficient
+        # placed on the bottom front table
+        zpos = 0.6
+    else:
+        xpos = 0
+        ypos = 0
+        zpos = 0
+
+    # if we are using the right arm, and we want to line the objects to the right, we reverse the y value
+    if reverse_y:
+        ypos = -ypos
+
+    return xpos, ypos, zpos
+
+
 # Callback function for your Point Cloud Subscriber
 def pcl_callback(pcl_msg):
     # Exercise-2 TODOs: segment and cluster the objects
@@ -704,16 +748,25 @@ def pcl_callback(pcl_msg):
                     dropbox1_picked_count += 1
                     print("first", dropbox1_picked_count)
 
-                    # compute horizontal and vertical adjustment for place pose
-                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(dropbox1_picked_count,
-                                                                                            place_position_horizontal_coefficient,
-                                                                                            place_position_vertical_coefficient)
+                    if WORLD == "test":
+                        # compute horizontal and vertical adjustment for place pose
+                        horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(dropbox1_picked_count,
+                                                                                                place_position_horizontal_coefficient,
+                                                                                                place_position_vertical_coefficient)
 
-                    place_position = Point()
+                        place_position = Point()
 
-                    place_position.x = dropbox[0]['position'][0] + vertical_adjustment
-                    place_position.y = dropbox[0]['position'][1] + horizontal_adjustment
-                    place_position.z = dropbox[0]['position'][2]
+                        place_position.x = dropbox[0]['position'][0] + vertical_adjustment
+                        place_position.y = dropbox[0]['position'][1] + horizontal_adjustment
+                        place_position.z = dropbox[0]['position'][2]
+                    elif WORLD == "challenge":
+                        xpos, ypos, zpos = compute_challenge_world_place_pose(dropbox1_picked_count)
+
+                        place_position = Point()
+
+                        place_position.x = xpos
+                        place_position.y = ypos
+                        place_position.z = zpos
 
                     place_pose.position = place_position
 
@@ -723,16 +776,25 @@ def pcl_callback(pcl_msg):
 
                     print("second", dropbox2_picked_count)
 
-                    # compute horizontal and vertical adjustment for place pose
-                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(dropbox2_picked_count,
-                                                                                            place_position_horizontal_coefficient,
-                                                                                            place_position_vertical_coefficient)
+                    if WORLD == "test":
+                        # compute horizontal and vertical adjustment for place pose
+                        horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(dropbox2_picked_count,
+                                                                                                place_position_horizontal_coefficient,
+                                                                                                place_position_vertical_coefficient)
 
-                    place_position = Point()
+                        place_position = Point()
 
-                    place_position.x = dropbox[1]['position'][0] + vertical_adjustment
-                    place_position.y = dropbox[1]['position'][1] + horizontal_adjustment
-                    place_position.z = dropbox[1]['position'][2]
+                        place_position.x = dropbox[1]['position'][0] + vertical_adjustment
+                        place_position.y = dropbox[1]['position'][1] + horizontal_adjustment
+                        place_position.z = dropbox[1]['position'][2]
+                    elif WORLD == "challenge":
+                        xpos, ypos, zpos = compute_challenge_world_place_pose(dropbox2_picked_count, reverse_y=True)
+
+                        place_position = Point()
+
+                        place_position.x = xpos
+                        place_position.y = ypos
+                        place_position.z = zpos
 
                     place_pose.position = place_position
 
