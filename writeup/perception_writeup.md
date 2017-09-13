@@ -23,7 +23,7 @@ cd ~/catkin_ws
 catkin_make
 ```
 
-3. Modify the file `/home/robond/catkin_ws/src/RoboND-Perception-Project/pr2_robot/scripts/object_recognition.py` and set the variables `WORLD` (line 45) and `TEST_SCENE_NUM` (line 47) to be based on the chosen world and pick list.
+3. Modify the file `/home/robond/catkin_ws/src/RoboND-Perception-Project/pr2_robot/scripts/object_recognition.py` and set the variables `WORLD_setting` (line 45) to `test1`, `test2`, `test3`, or `challenge`.
 
 4. Load the world. This should initialize Gazebo and Rviz with the chosen world setup.
 ```
