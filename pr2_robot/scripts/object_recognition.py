@@ -42,7 +42,12 @@ import time
 DEV_FLAG = 0
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
 
-WORLD = "test"
+WORLD = "test"  # set to "test" for test1.world, test2.world or test3.world.
+                # set to "challenge" for challenge.world
+TEST_SCENE_NUM = 1  # set to 1 for pick_list_1.yaml and test1.world
+                    # set to 2 for pick_list_2.yaml and test2.world
+                    # set to 3 for pick_list_3.yaml and test3.world
+                    # set to 4 for pick_list_4.yaml and challenge.world
 
 # initialize deposit box variables
 right_depositbox_cloud = None
@@ -630,7 +635,7 @@ def pcl_callback(pcl_msg):
                 centroids.append(computed_centroid)
 
                 test_scene_num = Int32()
-                test_scene_num.data = 3
+                test_scene_num.data = TEST_SCENE_NUM
 
                 # Initialize a variable
                 object_name = String()
@@ -717,7 +722,7 @@ def pcl_callback(pcl_msg):
                 #
                 # except rospy.ServiceException, e:
                 #     print "Service call failed: %s" % e
-                
+
                 continue
 
     # If items from the pick_list is present, generate the yaml file
