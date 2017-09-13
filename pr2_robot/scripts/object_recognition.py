@@ -79,6 +79,7 @@ left_objects_complete = False
 global_detected_object_list_details = []
 global_detected_object_labels = []
 
+
 # Helper function to get surface normals
 def get_normals(cloud):
     get_normals_prox = rospy.ServiceProxy('/feature_extractor/get_normals', GetNormals)
@@ -95,6 +96,7 @@ def make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose)
     yaml_dict["place_pose"] = message_converter.convert_ros_message_to_dictionary(place_pose)
     return yaml_dict
 
+
 def make_object_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose):
     object_dict = {}
     object_dict["test_scene_num"] = test_scene_num
@@ -103,6 +105,7 @@ def make_object_dict(test_scene_num, arm_name, object_name, pick_pose, place_pos
     object_dict["pick_pose"] = pick_pose
     object_dict["place_pose"] = place_pose
     return object_dict
+
 
 # Helper function to output to yaml file
 def send_to_yaml(yaml_filename, dict_list):
@@ -141,7 +144,6 @@ def move_world_joint(goal_j1):
 
 
 def passthrough_filter_challenge_world(pcl_cloud):
-
     # passthrough filter ranges to remove tables
     # bottom area 0 - 0.45
     # middle area 0.55(left side) 0.551 (right side) - 0.775
@@ -193,13 +195,12 @@ def passthrough_filter_challenge_world(pcl_cloud):
     passthrough_filter_z_middle.set_filter_field_name(filter_axis)
     # middle_axis_min = .6101
     # .6 for test world .5 or 0 for challenge world
-    middle_axis_min = 0.558 # 0.551 works for left and right, but 0.558 works for front
+    middle_axis_min = 0.558  # 0.551 works for left and right, but 0.558 works for front
     middle_axis_max = 0.775
     passthrough_filter_z_middle.set_filter_limits(middle_axis_min, middle_axis_max)
 
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_middle = passthrough_filter_z_middle.filter()
-
 
     passthrough_filter_x_middle = cloud_filtered_z_middle.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
@@ -213,7 +214,6 @@ def passthrough_filter_challenge_world(pcl_cloud):
 
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_x_middle = passthrough_filter_x_middle.filter()
-
 
     passthrough_filter_y_middle_left = cloud_filtered_x_middle.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
@@ -283,7 +283,6 @@ def passthrough_filter_challenge_world_extract_table(pcl_cloud):
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_bottom_table = passthrough_filter_bottom_table.filter()
 
-
     # top table filter
     passthrough_filter_top_table = pcl_cloud.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
@@ -342,7 +341,8 @@ def passthrough_filter_test_world(pcl_cloud):
     return filtered_cloud
 
 
-def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.08, place_position_vertical_coefficient=0.1):
+def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.08,
+                               place_position_vertical_coefficient=0.1):
     # compute horizontal adjustment
     if (item_number_for_group % 3) == 1:
         horizontal_adjustment = - (item_number_for_group * place_position_horizontal_coefficient)
@@ -354,7 +354,7 @@ def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_
         horizontal_adjustment = 0
 
     # compute for vertical adjustment
-    layer = math.ceil((item_number_for_group)/3.0)
+    layer = math.ceil(item_number_for_group / 3.0)
 
     vertical_adjustment = -(layer * place_position_vertical_coefficient)
     if vertical_adjustment <= -1:
@@ -386,8 +386,8 @@ def pcl_callback(pcl_msg):
                 current_side = "right"
             else:
                 current_side = "turning_right"
-            # right_twist_done = True
-            # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
+                # right_twist_done = True
+                # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
         elif not left_objects_complete:
             print("turning left")
             move_complete = move_world_joint(np.math.pi / 2)
@@ -395,8 +395,8 @@ def pcl_callback(pcl_msg):
                 current_side = "left"
             else:
                 current_side = "turning_left"
-            # left_twist_done = True
-            # pcl.save(ros_to_pcl(pcl_msg), "left_cloud.pcd")
+                # left_twist_done = True
+                # pcl.save(ros_to_pcl(pcl_msg), "left_cloud.pcd")
         else:
             print("returning to 0 orientation")
             move_complete = move_world_joint(0)
@@ -591,7 +591,8 @@ def pcl_callback(pcl_msg):
     # and we're not reidentifying the same set of items
     # then raise the flags that identification is complete
     if WORLD == "challenge":
-        if detected_objects and (unidentified_clusters == 0) and (set(global_detected_object_labels) != set(detected_objects_labels)):
+        if detected_objects and (unidentified_clusters == 0) and (
+            set(global_detected_object_labels) != set(detected_objects_labels)):
             if current_side == "right":
                 right_objects_complete = True
                 global_detected_object_list_details.extend(detected_objects)
@@ -674,7 +675,9 @@ def pcl_callback(pcl_msg):
                     print("first", first_dropbox_group_count)
 
                     # compute horizontal and vertical adjustment for place pose
-                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(first_dropbox_group_count, place_position_horizontal_coefficient, place_position_vertical_coefficient)
+                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(first_dropbox_group_count,
+                                                                                            place_position_horizontal_coefficient,
+                                                                                            place_position_vertical_coefficient)
 
                     place_position = Point()
 
@@ -691,7 +694,9 @@ def pcl_callback(pcl_msg):
                     print("second", second_dropbox_group_count)
 
                     # compute horizontal and vertical adjustment for place pose
-                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(second_dropbox_group_count, place_position_horizontal_coefficient, place_position_vertical_coefficient)
+                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(second_dropbox_group_count,
+                                                                                            place_position_horizontal_coefficient,
+                                                                                            place_position_vertical_coefficient)
 
                     place_position = Point()
 
@@ -710,7 +715,7 @@ def pcl_callback(pcl_msg):
                 dict_list.append(object_properties_dict)
 
                 object_dict = make_object_dict(test_scene_num, arm_name, object_name,
-                                                        pick_pose, place_pose)
+                                               pick_pose, place_pose)
                 object_dict_items[object_name.data] = object_dict
 
                 # rospy.wait_for_service('pick_place_routine')
@@ -809,53 +814,35 @@ def pcl_callback(pcl_msg):
     # for move in move_list:
     #     move_world_joint(move)
 
+    # If the pick place routine is enabled, and the world is a test world
+    if ENABLE_PICK_PLACE_ROUTINE and (WORLD == 'test'):
+        # Generate the pick list
+        pick_list_items = [object_item['name'] for object_item in object_list_param]
+        # Get the index of the label of the detected object in the object_list_param
+        # Determine if a first object exists in detected_objects, and check if in the pick list
+        if detected_objects and (detected_objects[0].label in pick_list_items):
+            # Assign the contents of the correct object ot pick
+            object_to_pick = object_dict_items[detected_objects[0].label]
+            # If yes, generate collision map, start with the table
+            collision_map_pcl_list_form = cloud_table.to_array().tolist()
+            # Add all other objects in the list
+            for other_item in detected_objects[1:]:
+                collision_map_pcl_list_form += ros_to_pcl(other_item.cloud).to_array().tolist()
+            # Publish collision map
+            collision_map_pcl = pcl.PointCloud_PointXYZRGB()
+            collision_map_pcl.from_list(collision_map_pcl_list_form)
+            collision_map_ros = pcl_to_ros(collision_map_pcl)
+            collidable_objects_pub.publish(collision_map_ros)
 
-    # print("pick routine begin")
-    object_to_pick = None
-    collision_map_pcl_list_form = []
-    for object_item in object_list_param:
-        # Empty the collision map
-        rospy.wait_for_service('clear_octomap')
-
-        # TODO clear the octomap, combine all collidable objects before publishing
-        try:
-            # https://answers.ros.org/question/12793/rospy-calling-clear-service-programatically/?answer=18877#post-id-18877
-            clear_collision_map_proxy = rospy.ServiceProxy('clear_octomap', Empty)
-            resp = clear_collision_map_proxy()
-
-            print ("Response: ", resp)
-
-        except rospy.ServiceException, e:
-            print "Service call failed: %s" % e
-
-        collision_map_pcl_list_form += cloud_table.to_array().tolist()
-
-        # print("looping to assign collision")
-        # publish all other objects as collidable
-        for detected_object in detected_objects:
-            if object_item['name'] == detected_object.label:
-                print("assigning " + detected_object.label + " as pickable and non collidable")
-                object_to_pick = object_dict_items[detected_object.label]
-                pcl.save(ros_to_pcl(detected_object.cloud), "./object_to_pick/" + detected_object.label + ".pcd")
-            else:
-                print("collidable " + detected_object.label)
-                # collidable_objects_pub.publish(detected_object.cloud)
-                collision_map_pcl_list_form += ros_to_pcl(detected_object.cloud).to_array().tolist()
-
-        collision_map_pcl = pcl.PointCloud_PointXYZRGB()
-        collision_map_pcl.from_list(collision_map_pcl_list_form)
-        collision_map_ros = pcl_to_ros(collision_map_pcl)
-        collidable_objects_pub.publish(collision_map_ros)
-
-        # Proceed to pick if we have an object to pick, if pick place routine is enabled, and the world is a test world
-        if (object_to_pick is not None) and ENABLE_PICK_PLACE_ROUTINE and (WORLD == "test"):
+            # Proceed to pick the object
             print("picking up " + object_to_pick["object_name"].data)
             rospy.wait_for_service('pick_place_routine')
 
             try:
                 pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
 
-                resp = pick_place_routine(object_to_pick["test_scene_num"], object_to_pick["object_name"], object_to_pick["arm_name"], object_to_pick["pick_pose"],
+                resp = pick_place_routine(object_to_pick["test_scene_num"], object_to_pick["object_name"],
+                                          object_to_pick["arm_name"], object_to_pick["pick_pose"],
                                           object_to_pick["place_pose"])
 
                 print ("Response: ", resp.success)
@@ -864,6 +851,24 @@ def pcl_callback(pcl_msg):
                 print "Service call failed: %s" % e
 
             object_to_pick = None
+
+        # If no detected objects, do nothing
+        else:
+            pass
+
+    # Clear the octomap/collision map once we are done
+    rospy.wait_for_service('clear_octomap')
+
+    try:
+        # https://answers.ros.org/question/12793/rospy-calling-clear-service-programatically/?answer=18877#post-id-18877
+        clear_collision_map_proxy = rospy.ServiceProxy('clear_octomap', Empty)
+        resp = clear_collision_map_proxy()
+
+        print ("Response: ", resp)
+
+    except rospy.ServiceException, e:
+        print "Service call failed: %s" % e
+
 
     # print("pick routine done")
 
@@ -893,7 +898,6 @@ if __name__ == '__main__':
 
     # collidable object publisher
     collidable_objects_pub = rospy.Publisher("/pr2/3D_map/points", PointCloud2, queue_size=20)
-
 
     # TODO: Create Subscribers
     pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2, pcl_callback, queue_size=1)
