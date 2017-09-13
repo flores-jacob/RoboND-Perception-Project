@@ -42,12 +42,12 @@ import time
 DEV_FLAG = 0
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
 
-WORLD_setting = "test1"  # set to "test1" for test1.WORLD_setting and pick_list1.yaml
+WORLD_setting = "challenge"  # set to "test1" for test1.WORLD_setting and pick_list1.yaml
                 # set to "test2" for test2.WORLD_setting and pick_list2.yaml
                 # set to "test3" for test3.WORLD_setting and pick_list3.yaml
                 # set to "challenge" for challenge.WORLD_setting and pick_list4.yaml
 
-ENABLE_PICK_PLACE_ROUTINE = False
+ENABLE_PICK_PLACE_ROUTINE = True
 
 if WORLD_setting == "test1":
     TEST_SCENE_NUM = 1
@@ -645,6 +645,7 @@ def pcl_callback(pcl_msg):
             elif current_side == "left":
                 left_objects_complete = True
                 global_detected_object_list_details.extend(detected_objects)
+                global_detected_object_labels.extend(detected_objects_labels)
                 print("All objects on the left labeled")
 
         if right_objects_complete and left_objects_complete:
