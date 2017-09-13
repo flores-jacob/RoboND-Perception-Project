@@ -342,7 +342,7 @@ def passthrough_filter_test_world(pcl_cloud):
     return filtered_cloud
 
 
-def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.05, place_position_vertical_coefficient=0.1):
+def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_coefficient=0.08, place_position_vertical_coefficient=0.1):
     # compute horizontal adjustment
     if (item_number_for_group % 3) == 1:
         horizontal_adjustment = - (item_number_for_group * place_position_horizontal_coefficient)
@@ -633,7 +633,7 @@ def pcl_callback(pcl_msg):
     second_dropbox_group_count = 0
 
     place_position_vertical_coefficient = .1
-    place_position_horizontal_coefficient = .05
+    place_position_horizontal_coefficient = .08
 
     for i in range(len(object_list_param)):
         object_name = object_list_param[i]['name']
