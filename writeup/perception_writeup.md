@@ -15,11 +15,26 @@
 
 
 #### How to run the code
-1. Modify the file `/home/robond/catkin_ws/src/RoboND-Perception-Project/pr2_robot/launch/pick_place_project.launch` and set the world name to either `test1.world`, `test2.world`, `test3.world`, or `challenge.world`.
+1. Modify the file `/home/robond/catkin_ws/src/RoboND-Perception-Project/pr2_robot/launch/pick_place_project.launch` and set the world name to either `test1.world`, `test2.world`, `test3.world`, or `challenge.world`. Check the code comments for a guide on the allowable values.
 
-2. 
+2. Build the project 
+```
+cd ~/catkin_ws
+catkin_make
+```
 
+3. Modify the file `/home/robond/catkin_ws/src/RoboND-Perception-Project/pr2_robot/scripts/object_recognition.py` and set the variables `WORLD` (line 45) and `TEST_SCENE_NUM` (line 47) to be based on the chosen world and pick list.
 
+4. Load the world. This should initialize Gazebo and Rviz with the chosen world setup.
+```
+roslaunch pr2_robot pick_place_project.launch
+```
+
+5. Run the script. This would instruct the robot to twist to the left and right if on a challenge world, then start identifying the objects. On a test world, it would start to identify the objects right away.
+```
+cd ~/catkin_ws/src/RoboND-Perception-Project/pr2_robot/scripts
+./object_recognition.py
+```
 
 
 ---
@@ -102,8 +117,6 @@ The object recognition code can be found in
 RoboND-Perception-Project/pr2_robot/scripts/object_recognition.py
 ```
 
-Below are the images for the labeled items in the three different test worlds
-
 
 The output yaml files are:
 
@@ -113,6 +126,66 @@ RoboND-Perception-Project/ros_independent_src/output_yaml/output_2.yaml
 RoboND-Perception-Project/ros_independent_src/output_yaml/output_3.yaml
 RoboND-Perception-Project/ros_independent_src/output_yaml/output_4.yaml
 ```
+
+
+#### Object detection results
+Below are the images for the labeled items in the three different test worlds and the challenge world
+
+##### test1.world
+
+###### test1.world Real Points
+![world1-real](./images/detection_screencaps/test1/world1_real.png)
+
+###### test1.world Clustered Points
+![world1-clusters](./images/detection_screencaps/test1/world1_clusters.png)
+
+###### test1.world Collision Map
+![world1-clusters](./images/detection_screencaps/test1/world1_collision.png)
+
+
+#### test2.world
+
+###### test2.world Real Points
+![world2-real](./images/detection_screencaps/test2/world2_real.png)
+
+###### test2.world Clustered Points
+![world2-clusters](./images/detection_screencaps/test2/world2_clusters.png)
+
+###### test2.world Collision Map
+![world2-clusters](./images/detection_screencaps/test2/world2_collision.png)
+
+
+#### test3.world
+
+###### test3.world Real Points
+![world3-real](./images/detection_screencaps/test3/world3_real.png)
+
+###### test3.world Clustered Points
+![world3-clusters](./images/detection_screencaps/test3/world3_clusters.png)
+
+###### test3.world Collision Map
+![world3-clusters](./images/detection_screencaps/test3/world3_collision.png)
+
+
+#### challenge.world
+
+###### challenge.world side 1 Real Points
+![challenge-real](./images/detection_screencaps/challenge/challenge_real.png)
+
+###### challenge.world side 1 Clustered Points
+![challenge-clusters](./images/detection_screencaps/challenge/challenge_clusters.png)
+
+###### challenge.world side 1 Collision Map
+![challenge-clusters](./images/detection_screencaps/challenge/challenge_collision.png)
+
+###### challenge.world side 2 Real Points
+![challenge-real2](./images/detection_screencaps/challenge/challenge_real2.png)
+
+###### challenge.world side 2 Clustered Points
+![challenge-clusters2](./images/detection_screencaps/challenge/challenge_clusters2.png)
+
+###### challenge.world side 2 Collision Map
+![challenge-clusters2](./images/detection_screencaps/challenge/challenge_collision2.png)
 
 Most of the code has been lifted from the exercises.  The major departures from the exercises involve code dealing with the object recognition for the challenge world to generate output4.yaml.  The most notable of these differences involve the intensive use of passthrough filters for the challenge world, to ensure that there are no anomalous artifacts when segmenting objects. RANSAC plane segmentation was also not used in the challenge world. Instead, to obtain the pcl and ros cloud of the table surfaces for the challenge world, we created multiple passthrough filters that encompass the table surfaces,which we then combined later on. Below, we restate the different techniques we use, and some observations.  
 
