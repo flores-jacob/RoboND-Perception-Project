@@ -624,6 +624,37 @@ def pcl_callback(pcl_msg):
     dropbox = rospy.get_param('/dropbox')
     # dropbox = [{'position': [0, 0.71, 0.605], 'group': 'red', 'name': 'left'}, {'position': [0, -0.71, 0.605], 'group': 'green', 'name': 'right'}]
 
+    # Code to identify how many items have already been placed in each dropbox
+    # Count the number of items destined for each dropbox
+    dropbox1_members = []
+    dropbox2_members = []
+    for object_item in object_list_param:
+        if object_item["group"] == dropbox[0]["group"]:
+            dropbox1_members.append(object_item["name"])
+        elif object_item["group"] == dropbox[1]["group"]:
+            dropbox2_members.append(object_item["name"])
+
+    dropbox1_intended_count = len(dropbox1_members)
+    dropbox2_intended_count = len(dropbox2_members)
+
+    # Count the number of detected objects on the table(s) destined for each dropbox, maybe do this for challenge world
+    # only once we have completely identified all the objects on the scene
+    dropbox1_unpicked = []
+    dropbox2_unpicked = []
+    for detected_object in detected_objects:
+        # check what group each detected object is meant to be in
+        if detected_object.label in dropbox1_members:
+            dropbox1_unpicked.append(detected_object.label)
+        elif detected_object.label in dropbox2_members:
+            dropbox2_unpicked.append(detected_object.label)
+
+    dropbox1_unpicked_count = len(dropbox1_unpicked)
+    dropbox2_unpicked_count = len(dropbox2_unpicked)
+
+    # Infer the number of already picked objects in each box by subtracting the items on the table from those on the
+    # pick list
+    dropbox1_picked_count = dropbox1_intended_count - dropbox1_unpicked_count
+    dropbox2_picked_count = dropbox2_intended_count - dropbox2_unpicked_count
 
     labels = []
     centroids = []  # to be list of tuples (x, y, z)
@@ -671,7 +702,7 @@ def pcl_callback(pcl_msg):
                 arm_name = String()
                 print("label", object.label)
                 if object_group == dropbox[0]['group']:
-                    first_dropbox_group_count += 1
+                    first_dropbox_group_count = dropbox1_picked_count + 1
                     print("first", first_dropbox_group_count)
 
                     # compute horizontal and vertical adjustment for place pose
@@ -689,7 +720,7 @@ def pcl_callback(pcl_msg):
 
                     arm_name.data = dropbox[0]['name']
                 elif object_group == dropbox[1]['group']:
-                    second_dropbox_group_count += 1
+                    second_dropbox_group_count = dropbox2_picked_count + 1
 
                     print("second", second_dropbox_group_count)
 
@@ -814,6 +845,7 @@ def pcl_callback(pcl_msg):
     # for move in move_list:
     #     move_world_joint(move)
 
+    # Perform pick_place_routine
     # If the pick place routine is enabled, and the world is a test world
     if ENABLE_PICK_PLACE_ROUTINE and (WORLD == 'test'):
         # Generate the pick list
@@ -869,15 +901,7 @@ def pcl_callback(pcl_msg):
     except rospy.ServiceException, e:
         print "Service call failed: %s" % e
 
-
-    # print("pick routine done")
-
-    # for i in range(len(detected_objects)):
-    #     # publish all items after it as collidable
-    #     for j in range(min(i + 1, len(detected_objects)), len(detected_objects)):
-    #         collidable_objects_pub.publish(detected_objects[j].cloud)
-    #         # afterwhich grasp the object
-
+    # save the cloud image to disk for potential diagnostic purposes
     pcl.save(ros_to_pcl(pcl_msg), "new_cloud.pcd")
     print("saved image of scene")
 
