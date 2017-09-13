@@ -42,12 +42,21 @@ import time
 DEV_FLAG = 0
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
 
-WORLD = "test"  # set to "test" for test1.world, test2.world or test3.world.
-                # set to "challenge" for challenge.world
-TEST_SCENE_NUM = 1  # set to 1 for pick_list_1.yaml and test1.world
-                    # set to 2 for pick_list_2.yaml and test2.world
-                    # set to 3 for pick_list_3.yaml and test3.world
-                    # set to 4 for pick_list_4.yaml and challenge.world
+WORLD = "test1"  # set to "test1" for test1.world and pick_list1.yaml
+                # set to "test2" for test2.world and pick_list2.yaml
+                # set to "test3" for test3.world and pick_list3.yaml
+                # set to "challenge" for challenge.world and pick_list4.yaml
+
+if WORLD == "test1":
+    TEST_SCENE_NUM = 1
+elif WORLD == "test2":
+    TEST_SCENE_NUM = 2
+elif WORLD == "test3":
+    TEST_SCENE_NUM = 3
+elif WORLD == "challenge":
+    TEST_SCENE_NUM = 4
+else:
+    TEST_SCENE_NUM = None
 
 # initialize deposit box variables
 right_depositbox_cloud = None
