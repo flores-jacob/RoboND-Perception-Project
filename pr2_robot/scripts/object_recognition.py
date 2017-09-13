@@ -661,9 +661,6 @@ def pcl_callback(pcl_msg):
     dict_list = []
     object_dict_items = {}
 
-    first_dropbox_group_count = 0
-    second_dropbox_group_count = 0
-
     place_position_vertical_coefficient = .1
     place_position_horizontal_coefficient = .08
 
@@ -702,11 +699,13 @@ def pcl_callback(pcl_msg):
                 arm_name = String()
                 print("label", object.label)
                 if object_group == dropbox[0]['group']:
-                    first_dropbox_group_count = dropbox1_picked_count + 1
-                    print("first", first_dropbox_group_count)
+                    # Derive what the nth value of the object is in the box by adding 1 to the objects already picked
+                    # that are in the box. We do this for this item and all the items following it
+                    dropbox1_picked_count += 1
+                    print("first", dropbox1_picked_count)
 
                     # compute horizontal and vertical adjustment for place pose
-                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(first_dropbox_group_count,
+                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(dropbox1_picked_count,
                                                                                             place_position_horizontal_coefficient,
                                                                                             place_position_vertical_coefficient)
 
@@ -720,12 +719,12 @@ def pcl_callback(pcl_msg):
 
                     arm_name.data = dropbox[0]['name']
                 elif object_group == dropbox[1]['group']:
-                    second_dropbox_group_count = dropbox2_picked_count + 1
+                    dropbox2_picked_count += 1
 
-                    print("second", second_dropbox_group_count)
+                    print("second", dropbox2_picked_count)
 
                     # compute horizontal and vertical adjustment for place pose
-                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(second_dropbox_group_count,
+                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(dropbox2_picked_count,
                                                                                             place_position_horizontal_coefficient,
                                                                                             place_position_vertical_coefficient)
 
