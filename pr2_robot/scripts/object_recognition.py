@@ -258,11 +258,11 @@ def passthrough_filter_challenge_world_extract_table(pcl_cloud):
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_filter_bottom_table.set_filter_field_name(filter_axis)
-    # bottom_axis_min = .6101
+    # bottom_table_axis_min = .6101
     # .6 for test world .5 or 0 for challenge world
-    bottom_axis_min = 0.46
-    bottom_axis_max = 0.557
-    passthrough_filter_bottom_table.set_filter_limits(bottom_axis_min, bottom_axis_max)
+    bottom_table_axis_min = 0.46
+    bottom_table_axis_max = 0.557
+    passthrough_filter_bottom_table.set_filter_limits(bottom_table_axis_min, bottom_table_axis_max)
 
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_bottom_table = passthrough_filter_bottom_table.filter()
@@ -273,11 +273,11 @@ def passthrough_filter_challenge_world_extract_table(pcl_cloud):
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_filter_top_table.set_filter_field_name(filter_axis)
-    # bottom_axis_min = .6101
+    # top_table_axis_min = .6101
     # .6 for test world .5 or 0 for challenge world
-    bottom_axis_min = 0.776
-    bottom_axis_max = 0.825
-    passthrough_filter_top_table.set_filter_limits(bottom_axis_min, bottom_axis_max)
+    top_table_axis_min = 0.776
+    top_table_axis_max = 0.86
+    passthrough_filter_top_table.set_filter_limits(top_table_axis_min, top_table_axis_max)
 
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_top_table = passthrough_filter_top_table.filter()
@@ -289,8 +289,6 @@ def passthrough_filter_challenge_world_extract_table(pcl_cloud):
 
     filtered_table_cloud = pcl.PointCloud_PointXYZRGB()
     filtered_table_cloud.from_list(combined_passthrough_filtered_list)
-
-    pcl.save(filtered_table_cloud, OUTPUT_PCD_DIRECTORY + "/table_cloud.pcd")
 
     return filtered_table_cloud
 
