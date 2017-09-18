@@ -15,25 +15,25 @@
 
 
 #### How to run the code
-1. Modify the file `/home/robond/catkin_ws/src/RoboND-Perception-Project/pr2_robot/launch/pick_place_project.launch` and set the world name to either `test1.world`, `test2.world`, `test3.world`, or `challenge.world`. Check the code comments for a guide on the allowable values.
+1. Modify the file `/home/robond/catkin_ws/src/RoboND-Perception-Project/pr2_robot/launch/pick_place_project.launch` and set the world name (Line 13) to either `test1.world`, `test2.world`, `test3.world`, or `challenge.world`. Also set the pick list (Line 39) to either `pick_list1.yaml` for `test1.world`, `pick_list2.yaml` for `test2.world`, `pick_list3.yaml` for `test3.world`, and `pick_list4.yaml` for `challenge.world`.
 
 2. Build the project 
 ```
-cd ~/catkin_ws
-catkin_make
+$ cd ~/catkin_ws
+$ catkin_make
 ```
 
-3. Modify the file `/home/robond/catkin_ws/src/RoboND-Perception-Project/pr2_robot/scripts/object_recognition.py` and set the variables `WORLD_setting` (line 45) to `test1`, `test2`, `test3`, or `challenge`.
+3. Modify the file `/home/robond/catkin_ws/src/RoboND-Perception-Project/pr2_robot/scripts/object_recognition.py` and set the variables `WORLD_setting` (line 45) to `test1`, `test2`, `test3`, or `challenge`, depending on which *.world file you chose in step 1.
 
 4. Load the world. This should initialize Gazebo and Rviz with the chosen world setup.
 ```
-roslaunch pr2_robot pick_place_project.launch
+$ roslaunch pr2_robot pick_place_project.launch
 ```
 
 5. Run the script. This would instruct the robot to twist to the left and right if on a challenge world, then start identifying the objects. On a test world, it would start to identify the objects right away.
 ```
-cd ~/catkin_ws/src/RoboND-Perception-Project/pr2_robot/scripts
-./object_recognition.py
+$ cd ~/catkin_ws/src/RoboND-Perception-Project/pr2_robot/scripts
+$ ./object_recognition.py
 ```
 
 
@@ -43,8 +43,7 @@ cd ~/catkin_ws/src/RoboND-Perception-Project/pr2_robot/scripts
 ### Exercise 1, 2 and 3 pipeline implemented
 #### 1. Complete Exercise 1 and 2 steps. Pipeline for filtering, RANSAC plane fitting, segmentation, and clustering implemented.
 
-Voxel downsampling, passthrough filtering, RANSAC plane segmentation, and Euclidean clustering were all performed on a 
-sample pcl cloud data, in the aforementioned order.  The code can be found in 
+Voxel downsampling, passthrough filtering, RANSAC plane segmentation, and Euclidean clustering were all performed on sample pcl cloud data, in the aforementioned order.  The code can be found in 
 ```RoboND-Perception-Exercises/Exercise-1/RANSAC.py``` and the results are shown below. 
 
 ##### Original data
@@ -59,7 +58,7 @@ This is done to reduce the total number of points on the scene to save on comput
 
 ##### After passthrough filtering
 This is done with the intention of removing extraneous points that are unnecessary to our purposes.  In this instance, 
-we are only interested in the table top and the obects found on top of it. 
+we are only interested in the table top and the objects found on top of it. 
 
 ![passthrough-filtered](./images/ex1/passthrough_filtered.png)
 
@@ -78,8 +77,7 @@ plane, which are basically our objects.
 ![ransac-outliers](./images/ex1/RANSAC_outliers.png)
 
 ##### After Euclidean clustering
-This is done to group or cluster each point with a particular group.  The idea is that each point belongs to the cluster
-that is closest to it, and that each cluster comprise an object of interest on top of the table.
+This is done to group or cluster each point with a particular group.  The idea is that each point belongs to a cluster or group that is closest to it, and that each cluster comprises an object of interest on top of the table.
 
 ![euclidean-clustering](./images/ex1/euclid.png)
 
@@ -90,15 +88,15 @@ We color code each point to show which cluster it belongs to
 ![colored-clusters](./images/ex1/cluster.png)
 
 
-#### 2. Complete Exercise 3 Steps.  Features extracted and SVM trained.  Object recognition implemented.
+#### 2. Complete Exercise 3 Steps.  Features are extracted and an SVM is trained.  Object recognition is implemented.
 For exercise 3, we: 
-1. Generate training sets by capturing color and normal historgrams of objects.  The script used in this instance can be
-found at `RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/capture_features.py`. In this instance, we 
-iterated 50 times for each object. The resultant training set can be found at 
-`RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/training_sets/training_set_complete_50.sav`. 
-2. Once training sets have been generated, we proceed to train our models using these.  The training script used can be 
-found at `RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/train_svm.py` and the resulting model can be found 
-at `RoboND-Perception-Exercises/Exercise-3/sensor_stick/scripts/models/model.sav`. The resultant confusion matrices are 
+1. Generate training sets by capturing color and normal histograms of objects.  A copy of the script used here can be
+found at `/home/robond/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/capture_features.py`. In this instance, we 
+iterated 50 times for each object. A copy of the resultant training set can be found at 
+`/home/robond/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/training_sets/training_set_complete_50.sav`. 
+2. Once training sets have been generated, we proceed to train our models using these.  A copy of the training script used can be 
+found at `/home/robond/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/train_svm.py` and the resulting model can be found 
+at `/home/robond/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/models/model.sav`. The resultant confusion matrices are 
 shown below
 
 Confusion Matrix
@@ -189,7 +187,7 @@ Below are the images for the labeled items in the three different test worlds an
 
 Most of the code has been lifted from the exercises.  The major departures from the exercises involve code dealing with the object recognition for the challenge world to generate output4.yaml.  The most notable of these differences involve the intensive use of passthrough filters for the challenge world, to ensure that there are no anomalous artifacts when segmenting objects. RANSAC plane segmentation was also not used in the challenge world. Instead, to obtain the pcl and ros cloud of the table surfaces for the challenge world, we created multiple passthrough filters that encompass the table surfaces,which we then combined later on. Below, we restate the different techniques we use, and some observations.  
 
-1. Statistical outlier filtering (noise filtering) - for effective noise filtering, it seems it is best to do the filtering at the very beginning, even before doing voxed downsampling.  The algorithm has an easier time removing point cloud outliers when non-noise points are at their densest.
+1. Statistical outlier filtering (noise filtering) - for effective noise filtering, it seems it is best to do the filtering at the very beginning, even before doing voxel downsampling.  The algorithm has an easier time removing point cloud outliers when non-noise points are at their densest.
 2. Voxel downsampling - for better object recognition effectivity, it may be best to have less downsampling. Although this will have to be balanced with the processing capacity of the host machine.  Point clouds that are too dense may consume too much processing cycles.
 3. Passthrough filtering - Partitioning pointclouds using this technique, and recombining them later on, has proven to be a very handy tool in isolating areas of interest and removing artifacts. If the environment we are working with is fairly fixed, using passthrough filtering to reduce scene complexity is fairly effective.  The downside however is if the opposite were true, that is, if the environment is dynamic, and there are no static areas. In these instances, this method may instead "chop up" the point cloud in the wrong places. It may, however, be possible to programmatically and dynamically determine which areas to passthrough filter, so it may still have utility even if the environment is dynamic. 
 4. RANSAC plane segmentation - the implementation from the exercises only allows for the segmentation of a single identified plane from a point cloud. For future implementations, we can explore how to identify and segment multiple planes from a single point cloud. We can also explore how segmentation of other geometric shapes can be done using this technique.
