@@ -593,13 +593,6 @@ def pcl_callback(pcl_msg):
 
     # Publish the list of detected objects
     rospy.loginfo('Detected {} objects: {}'.format(len(detected_objects_labels), detected_objects_labels))
-    # try:
-    #     for detected_object in detected_objects:
-    #         detected_objects_pub.publish(detected_object)
-    #     #collidable_objects_pub.publish(ros_cloud_objects)
-    # except Exception as e:
-    #     with open('myexception.txt', "w") as exceptionfile:
-    #         exceptionfile.writelines(str(e))
 
     # yaml publishing code
     # object_list_param is an ordered list of dicts
@@ -646,14 +639,18 @@ def pcl_callback(pcl_msg):
     dict_list = []
     object_dict_items = {}
 
+    # The coefficients are the multiples with which we determine the x and y place poses of the objects
     place_position_vertical_coefficient = .1
     place_position_horizontal_coefficient = .08
 
+    # We now proceed to determine the properties (centroid, label, pick pose, etc., of each identified cluster)
+    # We only work with items that are found in the pick lists
     for i in range(len(object_list_param)):
         object_name = object_list_param[i]['name']
         object_group = object_list_param[i]['group']
 
         for object in detected_objects:
+            # If one of the detected objects matches the item in the pick list, we proceed to process it
             if object.label == object_name:
                 labels.append(object.label)
                 points_arr = ros_to_pcl(object.cloud).to_array()
