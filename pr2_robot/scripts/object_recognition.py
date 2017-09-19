@@ -803,13 +803,13 @@ def pcl_callback(pcl_msg):
 
 
 if __name__ == '__main__':
-    # TODO: ROS node initialization
+    # ROS node initialization
     rospy.init_node('clustering', anonymous=True)
 
     # world_joint_publisher
     world_joint_controller_pub = rospy.Publisher("/pr2/world_joint_controller/command", Float64, queue_size=20)
 
-    # TODO: Create Publishers
+    # Create Publishers
     pcl_objects_pub = rospy.Publisher("/pcl_objects", PointCloud2, queue_size=1)
     pcl_table_pub = rospy.Publisher("/pcl_table", PointCloud2, queue_size=1)
 
@@ -819,7 +819,7 @@ if __name__ == '__main__':
     # collidable object publisher
     collidable_objects_pub = rospy.Publisher("/pr2/3D_map/points", PointCloud2, queue_size=20)
 
-    # TODO: Create Subscribers
+    # Create Subscribers
     pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2, pcl_callback, queue_size=1)
 
     # Initialize color_list
