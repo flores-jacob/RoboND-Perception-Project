@@ -420,7 +420,7 @@ def pcl_callback(pcl_msg):
     cloud_filtered = vox.filter()
 
     # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/voxel_downsampled.pcd")
-    print("voxel downsampled cloud saved")
+    print("voxel downsampling done")
 
     # conduct passthrough filtering
     if WORLD == "challenge":
@@ -428,17 +428,17 @@ def pcl_callback(pcl_msg):
         cloud_objects = passthrough_filter_challenge_world(cloud_filtered)
         cloud_table = passthrough_filter_challenge_world_extract_table(cloud_filtered)
         # pcl.save(cloud_objects, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
-        print("passthrough filtering done")
+        print("challenge world passthrough filtering done")
 
         # No RANSAC segmentation for challenge world, since all tables are passthrough filtered
-        # further RANSAC segmentation segments away object surfaces i.e books surfaces may be removed
+        # further RANSAC segmentation segments away object surfaces i.e book surfaces may be removed
 
     elif WORLD == "test":
         # if the world is the test world perform passthrough filtering for test worlds
         cloud_filtered = passthrough_filter_test_world(cloud_filtered)
 
         # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
-        print("passthrough filtering done")
+        print("test world passthrough filtering done")
 
         # RANSAC Plane Segmentation
         seg = cloud_filtered.make_segmenter()
@@ -448,8 +448,6 @@ def pcl_callback(pcl_msg):
         seg.set_method_type(pcl.SAC_RANSAC)
 
         # Max distance for a point to be considered fitting the model
-        # Experiment with different values for max_distance
-        # for segmenting the table
         max_distance = .003
         seg.set_distance_threshold(max_distance)
 
@@ -470,7 +468,7 @@ def pcl_callback(pcl_msg):
         # no passthrough filtering for cloud
         cloud_objects = cloud_filtered
         cloud_table = None
-        print("No passthrough filtering and RANSAC segmentation done")
+        print("No passthrough filtering and RANSAC segmentation performed")
 
     # Euclidean Clustering
     white_cloud = XYZRGB_to_XYZ(cloud_objects)
