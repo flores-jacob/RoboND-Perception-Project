@@ -65,17 +65,12 @@ else:
     TEST_SCENE_NUM = None
     WORLD = None
 
-# initialize deposit box variables
-right_depositbox_cloud = None
-left_depositbox_cloud = None
-
-# initialize variable keeping track of twisting status
-right_twist_done = False
-left_twist_done = False
-
+# initialize variables keeping track if all objects on the left and right of the challenge world have all been
+# identified
 right_objects_complete = False
 left_objects_complete = False
 
+# initialize empty lists where the challenge world will save its identified objects
 global_detected_object_list_details = []
 global_detected_object_labels = []
 
@@ -97,6 +92,7 @@ def make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose)
     return yaml_dict
 
 
+# Helper function that will create a dict of an identified object so that we can store it in a list
 def make_object_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose):
     object_dict = {}
     object_dict["test_scene_num"] = test_scene_num
@@ -114,6 +110,7 @@ def send_to_yaml(yaml_filename, dict_list):
         yaml.dump(data_dict, outfile, default_flow_style=False)
 
 
+# Function to identify if the world joint has reached its target angle
 def world_joint_at_goal(goal_j1):
     joint_states = rospy.wait_for_message('/pr2/joint_states', JointState)
     # the last joint state is the world_joint
@@ -123,22 +120,16 @@ def world_joint_at_goal(goal_j1):
     return result
 
 
+# Function to move the world joint to target angle
 def move_world_joint(goal_j1):
     move_complete = False
 
     while move_complete is False:
-        # print "pr2/joint_states", world_joint_state
-        # print("entering while loop")
-        # print("publishing to move joint")
         world_joint_controller_pub.publish(goal_j1)
-        # print("published to joint")
 
         if world_joint_at_goal(goal_j1):
-            # time_elapsed = world_joint_state.header.stamp - time_elapsed
             print("move complete to " + str(goal_j1) + " complete")
             move_complete = True
-
-    # print("done moving joint")
 
     return move_complete
 
@@ -154,92 +145,91 @@ def passthrough_filter_challenge_world(pcl_cloud):
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_filter_bottom.set_filter_field_name(filter_axis)
-    # bottom_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
-    bottom_axis_min = 0.0001
-    bottom_axis_max = 0.45
-    passthrough_filter_bottom.set_filter_limits(bottom_axis_min, bottom_axis_max)
+    # .00001 for bottom axis min so that we can omit the floor
+    bottom_axis_min_z = 0.0001
+    bottom_axis_max_z = 0.45
+    passthrough_filter_bottom.set_filter_limits(bottom_axis_min_z, bottom_axis_max_z)
 
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_bottom = passthrough_filter_bottom.filter()
 
+    # Once we've obtained the area beneath the bottom table, we will now omit the table stand to the left
     passthrough_filter_y_bottom_left = cloud_filtered_z_bottom.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
     passthrough_filter_y_bottom_left.set_filter_field_name(filter_axis)
-    bottom_axis_min = 1
-    bottom_axis_max = 20
-    passthrough_filter_y_bottom_left.set_filter_limits(bottom_axis_min, bottom_axis_max)
+    bottom_axis_min_y_left = 1
+    bottom_axis_max_y_left = 20
+    passthrough_filter_y_bottom_left.set_filter_limits(bottom_axis_min_y_left, bottom_axis_max_y_left)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_bottom_left = passthrough_filter_y_bottom_left.filter()
 
+    # We will now omit the table stand to the right
     passthrough_filter_y_bottom_right = cloud_filtered_z_bottom.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
     passthrough_filter_y_bottom_right.set_filter_field_name(filter_axis)
-    bottom_axis_min = -20
-    bottom_axis_max = -1
-    passthrough_filter_y_bottom_right.set_filter_limits(bottom_axis_min, bottom_axis_max)
+    bottom_axis_min_y_right = -20
+    bottom_axis_max_y_right = -1
+    passthrough_filter_y_bottom_right.set_filter_limits(bottom_axis_min_y_right, bottom_axis_max_y_right)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_bottom_right = passthrough_filter_y_bottom_right.filter()
     # **************** END filter bottom layer *******************
 
-
-
     # **************** START filter middle layer *******************
+    # Get the z layer between the bottom table and the top table
     passthrough_filter_z_middle = pcl_cloud.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_filter_z_middle.set_filter_field_name(filter_axis)
-    # middle_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
-    middle_axis_min = 0.558  # 0.551 works for left and right, but 0.558 works for front
+    middle_axis_min = 0.558  # 0.551 works for left and right, but 0.558 works for front also
     middle_axis_max = 0.775
     passthrough_filter_z_middle.set_filter_limits(middle_axis_min, middle_axis_max)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_middle = passthrough_filter_z_middle.filter()
 
+    # Omit the table stand of the table in front
     passthrough_filter_x_middle = cloud_filtered_z_middle.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'x'
     passthrough_filter_x_middle.set_filter_field_name(filter_axis)
-    # middle_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
     middle_axis_min = -20
     middle_axis_max = .7
     passthrough_filter_x_middle.set_filter_limits(middle_axis_min, middle_axis_max)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_x_middle = passthrough_filter_x_middle.filter()
 
+    # Exclude everything after the object area in left middle layer including the table stem
     passthrough_filter_y_middle_left = cloud_filtered_x_middle.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
     passthrough_filter_y_middle_left.set_filter_field_name(filter_axis)
-    middle_axis_min = 0
-    middle_axis_max = 0.855
-    passthrough_filter_y_middle_left.set_filter_limits(middle_axis_min, middle_axis_max)
+    middle_axis_min_y_left = 0
+    middle_axis_max_y_left = 0.855
+    passthrough_filter_y_middle_left.set_filter_limits(middle_axis_min_y_left, middle_axis_max_y_left)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_middle_left = passthrough_filter_y_middle_left.filter()
 
+    # Exclude everything after the object area in right middle layer including the table stem
     passthrough_filter_y_middle_right = cloud_filtered_x_middle.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
     passthrough_filter_y_middle_right.set_filter_field_name(filter_axis)
-    middle_axis_min = -0.855
-    middle_axis_max = 0
-    passthrough_filter_y_middle_right.set_filter_limits(middle_axis_min, middle_axis_max)
+    middle_axis_min_y_right = -0.855
+    middle_axis_max_y_right = 0
+    passthrough_filter_y_middle_right.set_filter_limits(middle_axis_min_y_right, middle_axis_max_y_right)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_middle_right = passthrough_filter_y_middle_right.filter()
     # **************** END filter middle layer *******************
 
-
     # **************** START filter top layer *******************
+    # Get the layer above the top table
     passthrough_filter_top = pcl_cloud.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
@@ -250,18 +240,20 @@ def passthrough_filter_challenge_world(pcl_cloud):
     top_axis_max = 1.0
     passthrough_filter_top.set_filter_limits(top_axis_min, top_axis_max)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_top = passthrough_filter_top.filter()
     # **************** END filter top layer *******************
 
     # convert to arrays,then to lists, to enable combination later on
-
     cloud_filtered_bottom_list = cloud_filtered_bottom_left.to_array().tolist() + cloud_filtered_bottom_right.to_array().tolist()
     cloud_filtered_middle_list = cloud_filtered_middle_left.to_array().tolist() + cloud_filtered_middle_right.to_array().tolist()
     cloud_filtered_z_top_list = cloud_filtered_z_top.to_array().tolist()
 
+    # We have chosen not to include the bottom layer to reduce comlexity. This is because the object recognition
+    # pipeline fails to identify the "create" objects roaming around the challenge world.
     combined_passthrough_filtered_list = cloud_filtered_middle_list + cloud_filtered_z_top_list
 
+    # Reconvert into PointCloud format
     filtered_cloud = pcl.PointCloud_PointXYZRGB()
     filtered_cloud.from_list(combined_passthrough_filtered_list)
 
@@ -269,18 +261,16 @@ def passthrough_filter_challenge_world(pcl_cloud):
 
 
 def passthrough_filter_challenge_world_extract_table(pcl_cloud):
+    # This filter is meant to get the PointClouds of the tables in the challenge world
     # bottom table filter
     passthrough_filter_bottom_table = pcl_cloud.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_filter_bottom_table.set_filter_field_name(filter_axis)
-    # bottom_table_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
     bottom_table_axis_min = 0.46
     bottom_table_axis_max = 0.557
     passthrough_filter_bottom_table.set_filter_limits(bottom_table_axis_min, bottom_table_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_bottom_table = passthrough_filter_bottom_table.filter()
 
     # top table filter
@@ -288,13 +278,10 @@ def passthrough_filter_challenge_world_extract_table(pcl_cloud):
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_filter_top_table.set_filter_field_name(filter_axis)
-    # top_table_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
     top_table_axis_min = 0.776
     top_table_axis_max = 0.86
     passthrough_filter_top_table.set_filter_limits(top_table_axis_min, top_table_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_top_table = passthrough_filter_top_table.filter()
 
     cloud_filtered_z_bottom_table_list = cloud_filtered_z_bottom_table.to_array().tolist()
@@ -324,14 +311,14 @@ def passthrough_filter_test_world(pcl_cloud):
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z = passthrough_z.filter()
 
-    # get areas of dropbox
+    # Omit dropbox areas
     passthrough_dropbox_x = cloud_filtered_z.make_passthrough_filter()
 
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'x'
     passthrough_dropbox_x.set_filter_field_name(filter_axis)
-    # for dropbox axis_min = -1.0, axis_max = .339
-    # for test world axis_min = .339 and axis_max = 1
+    # to obtain the dropbox x areas only, axis_min = -1.0, axis_max = .339
+    # to omit dropboxes and get the table areas only, axis_min = .339 and axis_max = 1
     axis_min = 0.339
     axis_max = 1
     passthrough_dropbox_x.set_filter_limits(axis_min, axis_max)
@@ -409,38 +396,35 @@ def compute_challenge_world_place_pose(item_number_for_group, y_coefficient=0.3,
 
 # Callback function for your Point Cloud Subscriber
 def pcl_callback(pcl_msg):
-    # Exercise-2 TODOs: segment and cluster the objects
+    # Invoke global variables for challenge world
     global right_objects_complete
     global left_objects_complete
 
     global global_detected_object_list_details
     global global_detected_object_labels
 
-    if DEV_FLAG == 1:
-        cloud = pcl_msg
-    else:
-        # TODO uncomment in production
-        cloud = ros_to_pcl(pcl_msg)
-
+    # If we are dealing with "challenge.world", then we instruct the robot to turn right and identify the objects on
+    # the right, and then turn left to identify the objects on the left
     if WORLD == "challenge":
+        # If not all of the objects on the right have been successfully identified we turn to the right
         if not right_objects_complete:
             print("turning right")
+            # Check if the move has been completed. if yes, set the current side to "right"
             move_complete = move_world_joint(-np.math.pi / 2)
             if move_complete:
                 current_side = "right"
             else:
                 current_side = "turning_right"
-                # right_twist_done = True
-                # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
+        # If not all of the objects on the left have been successfully identified we turn to the left
         elif not left_objects_complete:
             print("turning left")
+            # Check if the move has been completed. if yes, set the current side to "left"
             move_complete = move_world_joint(np.math.pi / 2)
             if move_complete:
                 current_side = "left"
             else:
                 current_side = "turning_left"
-                # left_twist_done = True
-                # pcl.save(ros_to_pcl(pcl_msg), "left_cloud.pcd")
+        # If done with both sides, return to the original front facing orientation
         else:
             print("returning to 0 orientation")
             move_complete = move_world_joint(0)
@@ -448,7 +432,15 @@ def pcl_callback(pcl_msg):
                 current_side = "front"
             else:
                 current_side = "turning_to_the_front"
-    # Remove noise from the both passthrough fitered areas
+
+    # if DEV_FLAG is 0, no conversion to pcl necessary, otherwise, convert ROS to PCL
+    if DEV_FLAG == 1:
+        cloud = pcl_msg
+    else:
+        cloud = ros_to_pcl(pcl_msg)
+
+    # Exercise-2 TODOs: segment and cluster the objects
+    # Remove noise from the point cloud
     outlier_filter = cloud.make_statistical_outlier_filter()
 
     # Set the number of neighboring points to analyze for any given point
@@ -457,13 +449,14 @@ def pcl_callback(pcl_msg):
     # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
     outlier_filter.set_std_dev_mul_thresh(1)
 
-    # Remove noise from object are
+    # Perform the noise filtration
     cloud = outlier_filter.filter()
     # pcl.save(cloud, OUTPUT_PCD_DIRECTORY + "/noise_reduced.pcd")
     print ("noise filtering done")
 
     # Voxel Grid Downsampling
     vox = cloud.make_voxel_grid_filter()
+    # We've set the leaf side to a lower value for greater detail
     LEAF_SIZE = .003
 
     # Set the voxel (or leaf) size
@@ -473,7 +466,7 @@ def pcl_callback(pcl_msg):
     cloud_filtered = vox.filter()
 
     # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/voxel_downsampled.pcd")
-    print("voxel downsampled cloud saved")
+    print("voxel downsampling done")
 
     # conduct passthrough filtering
     if WORLD == "challenge":
@@ -481,17 +474,17 @@ def pcl_callback(pcl_msg):
         cloud_objects = passthrough_filter_challenge_world(cloud_filtered)
         cloud_table = passthrough_filter_challenge_world_extract_table(cloud_filtered)
         # pcl.save(cloud_objects, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
-        print("passthrough filtering done")
+        print("challenge world passthrough filtering done")
 
         # No RANSAC segmentation for challenge world, since all tables are passthrough filtered
-        # further RANSAC segmentation segments away object surfaces i.e books surfaces may be removed
+        # further RANSAC segmentation segments away object surfaces i.e book surfaces may be removed
 
     elif WORLD == "test":
         # if the world is the test world perform passthrough filtering for test worlds
         cloud_filtered = passthrough_filter_test_world(cloud_filtered)
 
         # pcl.save(cloud_filtered, OUTPUT_PCD_DIRECTORY + "/passthrough_filtered.pcd")
-        print("passthrough filtering done")
+        print("test world passthrough filtering done")
 
         # RANSAC Plane Segmentation
         seg = cloud_filtered.make_segmenter()
@@ -501,8 +494,6 @@ def pcl_callback(pcl_msg):
         seg.set_method_type(pcl.SAC_RANSAC)
 
         # Max distance for a point to be considered fitting the model
-        # Experiment with different values for max_distance
-        # for segmenting the table
         max_distance = .003
         seg.set_distance_threshold(max_distance)
 
@@ -523,7 +514,7 @@ def pcl_callback(pcl_msg):
         # no passthrough filtering for cloud
         cloud_objects = cloud_filtered
         cloud_table = None
-        print("No passthrough filtering and RANSAC segmentation done")
+        print("No passthrough filtering and RANSAC segmentation performed")
 
     # Euclidean Clustering
     white_cloud = XYZRGB_to_XYZ(cloud_objects)
@@ -534,8 +525,6 @@ def pcl_callback(pcl_msg):
     ec = white_cloud.make_EuclideanClusterExtraction()
     # Set tolerances for distance threshold
     # as well as minimum and maximum cluster size (in points)
-    # NOTE: These are poor choices of clustering parameters
-    # Your task is to experiment and find values that work for segmenting objects.
     ec.set_ClusterTolerance(0.015)
     ec.set_MinClusterSize(150)
     ec.set_MaxClusterSize(50000)
@@ -560,19 +549,21 @@ def pcl_callback(pcl_msg):
     cluster_cloud.from_list(color_cluster_point_list)
 
     # pcl.save(cluster_cloud, OUTPUT_PCD_DIRECTORY + "/cluster_cloud.pcd")
+    print("Euclidean clustering done")
 
-    # TODO: Convert PCL data to ROS messages
+    # Convert PCL data to ROS messages
     ros_cloud_objects = pcl_to_ros(cluster_cloud)
     if cloud_table:
         ros_cloud_table = pcl_to_ros(cloud_table)
 
-    # TODO: Publish ROS messages
+    # Publish ROS messages
     pcl_objects_pub.publish(ros_cloud_objects)
     if cloud_table:
         pcl_table_pub.publish(ros_cloud_table)
 
     # Exercise-3 TODOs: identify the objects
 
+    # initialize empty lists that will hold labels and detected objects, as well as unidentified object counter
     detected_objects_labels = []
     detected_objects = []
     unidentified_clusters = 0
@@ -580,11 +571,10 @@ def pcl_callback(pcl_msg):
     for index, pts_list in enumerate(cluster_indices):
         # Grab the points for the cluster
         pcl_cluster = cloud_objects.extract(pts_list)
-        # TODO: convert the cluster from pcl to ROS using helper function
+        # Convert the cluster from pcl to ROS using helper function
         ros_cluster = pcl_to_ros(pcl_cluster)
 
         # Extract histogram features
-        # TODO: complete this step just as you did before in capture_features.py
         chists = compute_color_histograms(ros_cluster, using_hsv=True)
         normals = get_normals(ros_cluster)
         nhists = compute_normal_histograms(normals)
@@ -593,18 +583,17 @@ def pcl_callback(pcl_msg):
         # Make the prediction, retrieve the label for the result
         # and add it to detected_objects_labels list
 
-        # this will return an array with the probabilities of each choice
+        # This will return an array with the probabilities of each choice
         prediction_confidence_list = clf.predict_proba(scaler.transform(feature.reshape(1, -1)))
 
-        # this will return the index with the highest probability
+        # This will return the index with the highest probability
         prediction = clf.predict(scaler.transform(feature.reshape(1, -1)))
         print("prediction ", type(prediction), prediction)
 
-        # this will return the confidence value in of the prediction
+        # This will return the confidence value in of the prediction
         prediction_confidence = prediction_confidence_list[0][prediction]
 
-        # if the prediction_confidence is greater than 60%, proceed, else, skip prediction
-
+        # If the prediction_confidence is greater than 65%, proceed, else, add 1 to unidentified cluster counter
         if prediction_confidence > 0.65:
             label = encoder.inverse_transform(prediction)[0]
         else:
@@ -613,16 +602,13 @@ def pcl_callback(pcl_msg):
             unidentified_clusters += 1
             print("not sure if this is really a " + label)
 
+        # Add the label to the list of detected object's labels
         detected_objects_labels.append(label)
 
         # Publish a label into RViz
         label_pos = list(white_cloud[pts_list[0]])
         label_pos[2] += .4
-        # print(type(make_label))
         print("label", label, prediction_confidence)
-        # print("label pos",label_pos)
-        print("index", index)
-        # print(make_label(label,label_pos, index))
         object_markers_pub.publish(make_label(label, label_pos, index))
 
         # Add the detected object to the list of detected objects.
@@ -653,13 +639,6 @@ def pcl_callback(pcl_msg):
 
     # Publish the list of detected objects
     rospy.loginfo('Detected {} objects: {}'.format(len(detected_objects_labels), detected_objects_labels))
-    # try:
-    #     for detected_object in detected_objects:
-    #         detected_objects_pub.publish(detected_object)
-    #     #collidable_objects_pub.publish(ros_cloud_objects)
-    # except Exception as e:
-    #     with open('myexception.txt', "w") as exceptionfile:
-    #         exceptionfile.writelines(str(e))
 
     # yaml publishing code
     # object_list_param is an ordered list of dicts
@@ -706,14 +685,18 @@ def pcl_callback(pcl_msg):
     dict_list = []
     object_dict_items = {}
 
+    # The coefficients are the multiples with which we determine the x and y place poses of the objects
     place_position_vertical_coefficient = .1
     place_position_horizontal_coefficient = .08
 
+    # We now proceed to determine the properties (centroid, label, pick pose, etc., of each identified cluster)
+    # We only work with items that are found in the pick lists
     for i in range(len(object_list_param)):
         object_name = object_list_param[i]['name']
         object_group = object_list_param[i]['group']
 
         for object in detected_objects:
+            # If one of the detected objects matches the item in the pick list, we proceed to process it
             if object.label == object_name:
                 labels.append(object.label)
                 points_arr = ros_to_pcl(object.cloud).to_array()
@@ -811,30 +794,6 @@ def pcl_callback(pcl_msg):
                                                pick_pose, place_pose)
                 object_dict_items[object_name.data] = object_dict
 
-                # rospy.wait_for_service('pick_place_routine')
-                #
-                # try:
-                #     pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
-                #
-                #     print "test_scene_num", type(test_scene_num), test_scene_num
-                #     print "object_name", type(object_name), object_name
-                #     print "arm_name", type(arm_name), arm_name
-                #     print "pick_pose", type(pick_pose), pick_pose
-                #     print "place_pose", type(place_pose), place_pose
-                #
-                #     #resp = pick_place_routine(object_dict["test_scene_num"], object_dict["object_name"],
-                #     #                          object_dict["arm_name"], object_dict["pick_pose"],
-                #     #                          object_dict["place_pose"])
-                #
-                #     resp = pick_place_routine(test_scene_num, object_name,
-                #                               arm_name, pick_pose,
-                #                               place_pose)
-                #
-                #     print ("Response: ", resp.success)
-                #
-                # except rospy.ServiceException, e:
-                #     print "Service call failed: %s" % e
-
                 continue
 
     # If items from the pick_list is present, generate the yaml file
@@ -845,67 +804,6 @@ def pcl_callback(pcl_msg):
         elif (WORLD == 'challenge') and right_objects_complete and left_objects_complete:
             send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
             print("CHALLENGE WORLD yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
-
-    # Suggested location for where to invoke your pr2_mover() function within pcl_callback()
-    # Could add some logic to determine whether or not your object detections are robust
-    # before calling pr2_mover()
-    # try:
-    #     pr2_mover(detected_objects_list)
-    # except rospy.ROSInterruptException:
-    #     pass
-
-    # get all objects prior before table
-
-    # passthrough__dropbox_x = cloud_filtered.make_passthrough_filter()
-    #
-    # # Assign axis and range to the passthrough filter object.
-    # filter_axis = 'x'
-    # passthrough_x.set_filter_field_name(filter_axis)
-    # axis_min = .33
-    # axis_max = .95
-    # passthrough_x.set_filter_limits(axis_min, axis_max)
-    #
-    # cloud_filtered = passthrough_x.filter()
-
-
-
-    # # twist to the left, detect objects, locate dropbox, save dropbox cloud as collidable
-    # # twist to the right, detect objects, locate dropbox, save dropbox cloud as collidable
-    # # return to zero orientation
-    # #if (right_deposit_box_cloud is None) and (left_deposit_box_cloud is None):
-    # if (right_depositbox_cloud is None) and world_joint_at_goal(-np.math.pi/2):
-    #     # twist to the right
-    #     # move_world_joint(-np.math.pi/2)
-    #     # detect the dropbox while facing right
-    #     for detected_object in detected_objects:
-    #         # if the dropbox is present, assign its point cloud
-    #         if detected_object.label == 'dropbox':
-    #             right_depositbox_cloud = detected_object.cloud
-    #
-    #
-    # if (left_depositbox_cloud is None) and world_joint_at_goal(np.math.pi/2):
-    #     # twist to the left
-    #     # move_world_joint(np.math.pi/2)
-    #     # detect the dropbox while facing left
-    #     for detected_object in detected_objects:
-    #         if detected_object.label == 'dropbox':
-    #             left_depositbox_cloud = detected_object.cloud
-    #
-    #     # twist back to the original position
-    #     move_world_joint(0)
-    #
-    # # publish the depostibox clouds as collidable
-    # if right_depositbox_cloud:
-    #     collidable_objects_pub.publish(right_depositbox_cloud)
-    # if left_depositbox_cloud:
-    #     collidable_objects_pub.publish(left_depositbox_cloud)
-
-
-    # look around to detect the two dropboxes
-    # move_list = [np.math.pi/2, -np.math.pi/2, 0]
-    #
-    # for move in move_list:
-    #     move_world_joint(move)
 
     # Perform pick_place_routine
     # If the pick place routine is enabled, and the world is a test world
@@ -969,13 +867,13 @@ def pcl_callback(pcl_msg):
 
 
 if __name__ == '__main__':
-    # TODO: ROS node initialization
+    # ROS node initialization
     rospy.init_node('clustering', anonymous=True)
 
     # world_joint_publisher
     world_joint_controller_pub = rospy.Publisher("/pr2/world_joint_controller/command", Float64, queue_size=20)
 
-    # TODO: Create Publishers
+    # Create Publishers
     pcl_objects_pub = rospy.Publisher("/pcl_objects", PointCloud2, queue_size=1)
     pcl_table_pub = rospy.Publisher("/pcl_table", PointCloud2, queue_size=1)
 
@@ -985,7 +883,7 @@ if __name__ == '__main__':
     # collidable object publisher
     collidable_objects_pub = rospy.Publisher("/pr2/3D_map/points", PointCloud2, queue_size=20)
 
-    # TODO: Create Subscribers
+    # Create Subscribers
     pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2, pcl_callback, queue_size=1)
 
     # Initialize color_list
@@ -998,21 +896,6 @@ if __name__ == '__main__':
     encoder.classes_ = model['classes']
     scaler = model['scaler']
 
-    # if not (right_twist_done and left_twist_done):
-    #     if not right_twist_done:
-    #         print("turning right")
-    #         move_world_joint(-np.math.pi / 2)
-    #         right_twist_done = True
-    #         # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
-    #     #elif not left_twist_done:
-    #         print("turning left")
-    #         move_world_joint(np.math.pi / 2)
-    #         left_twist_done = True
-    #         # pcl.save(ros_to_pcl(pcl_msg), "left_cloud.pcd")
-    #     #else:
-    #         print("returning to 0 orientation")
-    #         move_world_joint(0)
-
-    # TODO: Spin while node is not shutdown
+    # Spin while node is not shutdown
     while not rospy.is_shutdown():
         rospy.spin()
