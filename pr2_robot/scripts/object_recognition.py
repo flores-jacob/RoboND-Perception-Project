@@ -259,18 +259,16 @@ def passthrough_filter_challenge_world(pcl_cloud):
 
 
 def passthrough_filter_challenge_world_extract_table(pcl_cloud):
+    # This filter is meant to get the PointClouds of the tables in the challenge world
     # bottom table filter
     passthrough_filter_bottom_table = pcl_cloud.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_filter_bottom_table.set_filter_field_name(filter_axis)
-    # bottom_table_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
     bottom_table_axis_min = 0.46
     bottom_table_axis_max = 0.557
     passthrough_filter_bottom_table.set_filter_limits(bottom_table_axis_min, bottom_table_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_bottom_table = passthrough_filter_bottom_table.filter()
 
     # top table filter
@@ -278,13 +276,10 @@ def passthrough_filter_challenge_world_extract_table(pcl_cloud):
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_filter_top_table.set_filter_field_name(filter_axis)
-    # top_table_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
     top_table_axis_min = 0.776
     top_table_axis_max = 0.86
     passthrough_filter_top_table.set_filter_limits(top_table_axis_min, top_table_axis_max)
-
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_top_table = passthrough_filter_top_table.filter()
 
     cloud_filtered_z_bottom_table_list = cloud_filtered_z_bottom_table.to_array().tolist()
@@ -314,14 +309,14 @@ def passthrough_filter_test_world(pcl_cloud):
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z = passthrough_z.filter()
 
-    # get areas of dropbox
+    # Omit dropbox areas
     passthrough_dropbox_x = cloud_filtered_z.make_passthrough_filter()
 
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'x'
     passthrough_dropbox_x.set_filter_field_name(filter_axis)
-    # for dropbox axis_min = -1.0, axis_max = .339
-    # for test world axis_min = .339 and axis_max = 1
+    # to obtain the dropbox x areas only, axis_min = -1.0, axis_max = .339
+    # to omit dropboxes and get the table areas only, axis_min = .339 and axis_max = 1
     axis_min = 0.339
     axis_max = 1
     passthrough_dropbox_x.set_filter_limits(axis_min, axis_max)
