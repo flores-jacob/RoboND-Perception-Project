@@ -585,6 +585,7 @@ def pcl_callback(pcl_msg):
             elif current_side == "left":
                 left_objects_complete = True
                 global_detected_object_list_details.extend(detected_objects)
+                global_detected_object_labels.extend(detected_objects_labels)
                 print("All objects on the left labeled")
 
         if right_objects_complete and left_objects_complete:
