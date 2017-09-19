@@ -479,8 +479,6 @@ def pcl_callback(pcl_msg):
     ec = white_cloud.make_EuclideanClusterExtraction()
     # Set tolerances for distance threshold
     # as well as minimum and maximum cluster size (in points)
-    # NOTE: These are poor choices of clustering parameters
-    # Your task is to experiment and find values that work for segmenting objects.
     ec.set_ClusterTolerance(0.015)
     ec.set_MinClusterSize(150)
     ec.set_MaxClusterSize(50000)
@@ -505,19 +503,21 @@ def pcl_callback(pcl_msg):
     cluster_cloud.from_list(color_cluster_point_list)
 
     # pcl.save(cluster_cloud, OUTPUT_PCD_DIRECTORY + "/cluster_cloud.pcd")
+    print("Euclidean clustering done")
 
-    # TODO: Convert PCL data to ROS messages
+    # Convert PCL data to ROS messages
     ros_cloud_objects = pcl_to_ros(cluster_cloud)
     if cloud_table:
         ros_cloud_table = pcl_to_ros(cloud_table)
 
-    # TODO: Publish ROS messages
+    # Publish ROS messages
     pcl_objects_pub.publish(ros_cloud_objects)
     if cloud_table:
         pcl_table_pub.publish(ros_cloud_table)
 
     # Exercise-3 TODOs: identify the objects
 
+    # initialize empty lists that will hold labels and detected objects, as well as unidentified object counter
     detected_objects_labels = []
     detected_objects = []
     unidentified_clusters = 0
@@ -525,11 +525,10 @@ def pcl_callback(pcl_msg):
     for index, pts_list in enumerate(cluster_indices):
         # Grab the points for the cluster
         pcl_cluster = cloud_objects.extract(pts_list)
-        # TODO: convert the cluster from pcl to ROS using helper function
+        # Convert the cluster from pcl to ROS using helper function
         ros_cluster = pcl_to_ros(pcl_cluster)
 
         # Extract histogram features
-        # TODO: complete this step just as you did before in capture_features.py
         chists = compute_color_histograms(ros_cluster, using_hsv=True)
         normals = get_normals(ros_cluster)
         nhists = compute_normal_histograms(normals)
@@ -538,18 +537,17 @@ def pcl_callback(pcl_msg):
         # Make the prediction, retrieve the label for the result
         # and add it to detected_objects_labels list
 
-        # this will return an array with the probabilities of each choice
+        # This will return an array with the probabilities of each choice
         prediction_confidence_list = clf.predict_proba(scaler.transform(feature.reshape(1, -1)))
 
-        # this will return the index with the highest probability
+        # This will return the index with the highest probability
         prediction = clf.predict(scaler.transform(feature.reshape(1, -1)))
         print("prediction ", type(prediction), prediction)
 
-        # this will return the confidence value in of the prediction
+        # This will return the confidence value in of the prediction
         prediction_confidence = prediction_confidence_list[0][prediction]
 
-        # if the prediction_confidence is greater than 60%, proceed, else, skip prediction
-
+        # If the prediction_confidence is greater than 65%, proceed, else, add 1 to unidentified cluster counter
         if prediction_confidence > 0.65:
             label = encoder.inverse_transform(prediction)[0]
         else:
@@ -558,16 +556,13 @@ def pcl_callback(pcl_msg):
             unidentified_clusters += 1
             print("not sure if this is really a " + label)
 
+        # Add the label to the list of detected object's labels
         detected_objects_labels.append(label)
 
         # Publish a label into RViz
         label_pos = list(white_cloud[pts_list[0]])
         label_pos[2] += .4
-        # print(type(make_label))
         print("label", label, prediction_confidence)
-        # print("label pos",label_pos)
-        print("index", index)
-        # print(make_label(label,label_pos, index))
         object_markers_pub.publish(make_label(label, label_pos, index))
 
         # Add the detected object to the list of detected objects.
