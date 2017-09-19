@@ -350,38 +350,35 @@ def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_
 
 # Callback function for your Point Cloud Subscriber
 def pcl_callback(pcl_msg):
-    # Exercise-2 TODOs: segment and cluster the objects
+    # Invoke global variables for challenge world
     global right_objects_complete
     global left_objects_complete
 
     global global_detected_object_list_details
     global global_detected_object_labels
 
-    if DEV_FLAG == 1:
-        cloud = pcl_msg
-    else:
-        # TODO uncomment in production
-        cloud = ros_to_pcl(pcl_msg)
-
+    # If we are dealing with "challenge.world", then we instruct the robot to turn right and identify the objects on
+    # the right, and then turn left to identify the objects on the left
     if WORLD == "challenge":
+        # If not all of the objects on the right have been successfully identified we turn to the right
         if not right_objects_complete:
             print("turning right")
+            # Check if the move has been completed. if yes, set the current side to "right"
             move_complete = move_world_joint(-np.math.pi / 2)
             if move_complete:
                 current_side = "right"
             else:
                 current_side = "turning_right"
-                # right_twist_done = True
-                # pcl.save(ros_to_pcl(pcl_msg), "right_cloud.pcd")
+        # If not all of the objects on the left have been successfully identified we turn to the left
         elif not left_objects_complete:
             print("turning left")
+            # Check if the move has been completed. if yes, set the current side to "left"
             move_complete = move_world_joint(np.math.pi / 2)
             if move_complete:
                 current_side = "left"
             else:
                 current_side = "turning_left"
-                # left_twist_done = True
-                # pcl.save(ros_to_pcl(pcl_msg), "left_cloud.pcd")
+        # If done with both sides, return to the original front facing orientation
         else:
             print("returning to 0 orientation")
             move_complete = move_world_joint(0)
@@ -389,7 +386,15 @@ def pcl_callback(pcl_msg):
                 current_side = "front"
             else:
                 current_side = "turning_to_the_front"
-    # Remove noise from the both passthrough fitered areas
+
+    # if DEV_FLAG is 0, no conversion to pcl necessary, otherwise, convert ROS to PCL
+    if DEV_FLAG == 1:
+        cloud = pcl_msg
+    else:
+        cloud = ros_to_pcl(pcl_msg)
+
+    # Exercise-2 TODOs: segment and cluster the objects
+    # Remove noise from the point cloud
     outlier_filter = cloud.make_statistical_outlier_filter()
 
     # Set the number of neighboring points to analyze for any given point
@@ -398,13 +403,14 @@ def pcl_callback(pcl_msg):
     # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
     outlier_filter.set_std_dev_mul_thresh(1)
 
-    # Remove noise from object are
+    # Perform the noise filtration
     cloud = outlier_filter.filter()
     # pcl.save(cloud, OUTPUT_PCD_DIRECTORY + "/noise_reduced.pcd")
     print ("noise filtering done")
 
     # Voxel Grid Downsampling
     vox = cloud.make_voxel_grid_filter()
+    # We've set the leaf side to a lower value for greater detail
     LEAF_SIZE = .003
 
     # Set the voxel (or leaf) size
