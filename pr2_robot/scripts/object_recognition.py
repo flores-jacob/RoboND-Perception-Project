@@ -37,16 +37,16 @@ from sensor_msgs.msg import JointState
 from std_srvs.srv import Empty
 
 import math
-import time
 
 DEV_FLAG = 0
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
 
-WORLD_setting = "test1"  # set to "test1" for test1.WORLD_setting and pick_list1.yaml
-                # set to "test2" for test2.WORLD_setting and pick_list2.yaml
-                # set to "test3" for test3.WORLD_setting and pick_list3.yaml
-                # set to "challenge" for challenge.WORLD_setting and pick_list4.yaml
+WORLD_setting = "test1" # set to "test1" for test1.world and pick_list1.yaml
+                        # set to "test2" for test2.world and pick_list2.yaml
+                        # set to "test3" for test3.world and pick_list3.yaml
+                        # set to "challenge" for challenge.world and pick_list4.yaml
 
+# Set to True to enable pick place routine.  Otherwise, set to False if only object recognition is required
 ENABLE_PICK_PLACE_ROUTINE = False
 
 if WORLD_setting == "test1":
@@ -65,17 +65,12 @@ else:
     TEST_SCENE_NUM = None
     WORLD = None
 
-# initialize deposit box variables
-right_depositbox_cloud = None
-left_depositbox_cloud = None
-
-# initialize variable keeping track of twisting status
-right_twist_done = False
-left_twist_done = False
-
+# initialize variables keeping track if all objects on the left and right of the challenge world have all been
+# identified
 right_objects_complete = False
 left_objects_complete = False
 
+# initialize empty lists where the challenge world will save its identified objects
 global_detected_object_list_details = []
 global_detected_object_labels = []
 
@@ -97,6 +92,7 @@ def make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose)
     return yaml_dict
 
 
+# Helper function that will create a dict of an identified object so that we can store it in a list
 def make_object_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose):
     object_dict = {}
     object_dict["test_scene_num"] = test_scene_num
@@ -114,6 +110,7 @@ def send_to_yaml(yaml_filename, dict_list):
         yaml.dump(data_dict, outfile, default_flow_style=False)
 
 
+# Function to identify if the world joint has reached its target angle
 def world_joint_at_goal(goal_j1):
     joint_states = rospy.wait_for_message('/pr2/joint_states', JointState)
     # the last joint state is the world_joint
@@ -123,22 +120,16 @@ def world_joint_at_goal(goal_j1):
     return result
 
 
+# Function to move the world joint to target angle
 def move_world_joint(goal_j1):
     move_complete = False
 
     while move_complete is False:
-        # print "pr2/joint_states", world_joint_state
-        # print("entering while loop")
-        # print("publishing to move joint")
         world_joint_controller_pub.publish(goal_j1)
-        # print("published to joint")
 
         if world_joint_at_goal(goal_j1):
-            # time_elapsed = world_joint_state.header.stamp - time_elapsed
             print("move complete to " + str(goal_j1) + " complete")
             move_complete = True
-
-    # print("done moving joint")
 
     return move_complete
 
@@ -154,114 +145,113 @@ def passthrough_filter_challenge_world(pcl_cloud):
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_filter_bottom.set_filter_field_name(filter_axis)
-    # bottom_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
-    bottom_axis_min = 0.0001
-    bottom_axis_max = 0.45
-    passthrough_filter_bottom.set_filter_limits(bottom_axis_min, bottom_axis_max)
+    # .00001 for bottom axis min so that we can omit the floor
+    bottom_axis_min_z = 0.0001
+    bottom_axis_max_z = 0.45
+    passthrough_filter_bottom.set_filter_limits(bottom_axis_min_z, bottom_axis_max_z)
 
     # Finally use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_bottom = passthrough_filter_bottom.filter()
 
+    # Once we've obtained the area beneath the bottom table, we will now omit the table stand to the left
     passthrough_filter_y_bottom_left = cloud_filtered_z_bottom.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
     passthrough_filter_y_bottom_left.set_filter_field_name(filter_axis)
-    bottom_axis_min = 1
-    bottom_axis_max = 20
-    passthrough_filter_y_bottom_left.set_filter_limits(bottom_axis_min, bottom_axis_max)
+    bottom_axis_min_y_left = 1
+    bottom_axis_max_y_left = 20
+    passthrough_filter_y_bottom_left.set_filter_limits(bottom_axis_min_y_left, bottom_axis_max_y_left)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_bottom_left = passthrough_filter_y_bottom_left.filter()
 
+    # We will now omit the table stand to the right
     passthrough_filter_y_bottom_right = cloud_filtered_z_bottom.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
     passthrough_filter_y_bottom_right.set_filter_field_name(filter_axis)
-    bottom_axis_min = -20
-    bottom_axis_max = -1
-    passthrough_filter_y_bottom_right.set_filter_limits(bottom_axis_min, bottom_axis_max)
+    bottom_axis_min_y_right = -20
+    bottom_axis_max_y_right = -1
+    passthrough_filter_y_bottom_right.set_filter_limits(bottom_axis_min_y_right, bottom_axis_max_y_right)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_bottom_right = passthrough_filter_y_bottom_right.filter()
     # **************** END filter bottom layer *******************
 
-
-
     # **************** START filter middle layer *******************
+    # Get the z layer between the bottom table and the top table
     passthrough_filter_z_middle = pcl_cloud.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_filter_z_middle.set_filter_field_name(filter_axis)
-    # middle_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
-    middle_axis_min = 0.558  # 0.551 works for left and right, but 0.558 works for front
+    middle_axis_min = 0.558  # 0.551 works for left and right, but 0.558 works for front also
     middle_axis_max = 0.775
     passthrough_filter_z_middle.set_filter_limits(middle_axis_min, middle_axis_max)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_middle = passthrough_filter_z_middle.filter()
 
+    # Omit the table stand of the table in front
     passthrough_filter_x_middle = cloud_filtered_z_middle.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'x'
     passthrough_filter_x_middle.set_filter_field_name(filter_axis)
-    # middle_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
     middle_axis_min = -20
     middle_axis_max = .7
     passthrough_filter_x_middle.set_filter_limits(middle_axis_min, middle_axis_max)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_x_middle = passthrough_filter_x_middle.filter()
 
+    # Exclude everything after the object area in left middle layer including the table stem
     passthrough_filter_y_middle_left = cloud_filtered_x_middle.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
     passthrough_filter_y_middle_left.set_filter_field_name(filter_axis)
-    middle_axis_min = 0
-    middle_axis_max = 0.855
-    passthrough_filter_y_middle_left.set_filter_limits(middle_axis_min, middle_axis_max)
+    middle_axis_min_y_left = 0
+    middle_axis_max_y_left = 0.855
+    passthrough_filter_y_middle_left.set_filter_limits(middle_axis_min_y_left, middle_axis_max_y_left)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_middle_left = passthrough_filter_y_middle_left.filter()
 
+    # Exclude everything after the object area in right middle layer including the table stem
     passthrough_filter_y_middle_right = cloud_filtered_x_middle.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'y'
     passthrough_filter_y_middle_right.set_filter_field_name(filter_axis)
-    middle_axis_min = -0.855
-    middle_axis_max = 0
-    passthrough_filter_y_middle_right.set_filter_limits(middle_axis_min, middle_axis_max)
+    middle_axis_min_y_right = -0.855
+    middle_axis_max_y_right = 0
+    passthrough_filter_y_middle_right.set_filter_limits(middle_axis_min_y_right, middle_axis_max_y_right)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_middle_right = passthrough_filter_y_middle_right.filter()
     # **************** END filter middle layer *******************
 
-
     # **************** START filter top layer *******************
+    # Get the layer above the top table
     passthrough_filter_top = pcl_cloud.make_passthrough_filter()
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_filter_top.set_filter_field_name(filter_axis)
-    # top_axis_min = .6101
-    # .6 for test world .5 or 0 for challenge world
     top_axis_min = 0.826
     top_axis_max = 1.0
     passthrough_filter_top.set_filter_limits(top_axis_min, top_axis_max)
 
-    # Finally use the filter function to obtain the resultant point cloud.
+    # Use the filter function to obtain the resultant point cloud.
     cloud_filtered_z_top = passthrough_filter_top.filter()
     # **************** END filter top layer *******************
 
     # convert to arrays,then to lists, to enable combination later on
-
     cloud_filtered_bottom_list = cloud_filtered_bottom_left.to_array().tolist() + cloud_filtered_bottom_right.to_array().tolist()
     cloud_filtered_middle_list = cloud_filtered_middle_left.to_array().tolist() + cloud_filtered_middle_right.to_array().tolist()
     cloud_filtered_z_top_list = cloud_filtered_z_top.to_array().tolist()
 
+    # We have chosen not to include the bottom layer to reduce comlexity. This is because the object recognition
+    # pipeline fails to identify the "create" objects roaming around the challenge world.
     combined_passthrough_filtered_list = cloud_filtered_middle_list + cloud_filtered_z_top_list
 
+    # Reconvert into PointCloud format
     filtered_cloud = pcl.PointCloud_PointXYZRGB()
     filtered_cloud.from_list(combined_passthrough_filtered_list)
 
