@@ -1,15 +1,5 @@
 ## Project: Perception Pick & Place
 
-
-# Extra Challenges: Complete the Pick & Place
-7. To create a collision map, publish a point cloud to the `/pr2/3d_map/points` topic and make sure you change the `point_cloud_topic` to `/pr2/3d_map/points` in `sensors.yaml` in the `/pr2_robot/config/` directory. This topic is read by Moveit!, which uses this point cloud input to generate a collision map, allowing the robot to plan its trajectory.  Keep in mind that later when you go to pick up an object, you must first remove it from this point cloud so it is removed from the collision map!
-8. Rotate the robot to generate collision map of table sides. This can be accomplished by publishing joint angle value(in radians) to `/pr2/world_joint_controller/command`
-9. Rotate the robot back to its original state.
-10. Create a ROS Client for the “pick_place_routine” rosservice.  In the required steps above, you already created the messages you need to use this service. Checkout the [PickPlace.srv](https://github.com/udacity/RoboND-Perception-Project/tree/master/pr2_robot/srv) file to find out what arguments you must pass to this service.
-11. If everything was done correctly, when you pass the appropriate messages to the `pick_place_routine` service, the selected arm will perform pick and place operation and display trajectory in the RViz window
-12. Place all the objects from your pick list in their respective dropoff box and you have completed the challenge!
-13. Looking for a bigger challenge?  Load up the `challenge.world` scenario and see if you can get your perception pipeline working there!
-
 ## [Rubric](https://review.udacity.com/#!/rubrics/1067/view) Points
 ### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
 
@@ -97,11 +87,11 @@ iterated 50 times for each object. A copy of the resultant training set can be f
 2. Once training sets have been generated, we proceed to train our models using these.  A copy of the training script used can be found at `~/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/train_svm.py` and the resulting model can be found at `~/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/models/model.sav`. The resultant confusion matrices are shown below
 
 
-Confusion Matrix
-![confusion-matrix](./images/ex3/Figure_1.png)
+- Confusion Matrix
+- ![confusion-matrix](./images/ex3/Figure_1.png)
 
-Normalized Confusion Matrix
-![normalized-confusion-matrix](./images/ex3/Figure_2.png)
+- Normalized Confusion Matrix
+- ![normalized-confusion-matrix](./images/ex3/Figure_2.png)
 
 
 ### Pick and Place Setup
@@ -183,7 +173,7 @@ Below are the images for the labeled items in the three different test worlds an
 ###### challenge.world side 2 Collision Map
 ![challenge-clusters2](./images/detection_screencaps/challenge/challenge_collision2.png)
 
-Most of the code has been lifted from the exercises.  The major departures from the exercises involve code dealing with the object recognition for the challenge world to generate output4.yaml.  The most notable of these differences involve the intensive use of passthrough filters for the challenge world, to ensure that there are no anomalous artifacts when segmenting objects. RANSAC plane segmentation was also not used in the challenge world. Instead, to obtain the pcl and ros cloud of the table surfaces for the challenge world, we created multiple passthrough filters that encompass the table surfaces,which we then combined later on. Below, we restate the different techniques we use, and some observations.  
+Most of the code has been done according to the exercises.  The major departures from the exercises involve code dealing with the object recognition for the challenge world to generate output4.yaml.  The most notable of these differences involve the intensive use of passthrough filters for the challenge world, to ensure that there are no anomalous artifacts when segmenting objects. RANSAC plane segmentation was also not used in the challenge world. Instead, to obtain the pcl and ros cloud of the table surfaces for the challenge world, we created multiple passthrough filters that encompass the table surfaces,which we then combined later on. Below, we restate the different techniques we use, and some observations.  
 
 1. Statistical outlier filtering (noise filtering) - for effective noise filtering, it seems it is best to do the filtering at the very beginning, even before doing voxel downsampling.  The algorithm has an easier time removing point cloud outliers when non-noise points are denser.
 2. Voxel downsampling - for better object recognition effectivity, it may be best to have less downsampling. Although this will have to be balanced with the processing capacity of the host machine.  Point clouds that are too dense may consume too much processing cycles, and may take too long to process.
