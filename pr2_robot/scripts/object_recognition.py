@@ -808,18 +808,26 @@ def pcl_callback(pcl_msg):
 
     # Perform pick_place_routine
     # If the pick place routine is enabled, and the world is a test world
-    if ENABLE_PICK_PLACE_ROUTINE and (WORLD == 'test'):
+    if ENABLE_PICK_PLACE_ROUTINE:
+        # Assign which detected object list to work on
+        if WORLD == "test":
+            detected_objects_to_pick = detected_objects
+        elif (WORLD == "challenge") and (right_objects_complete and left_objects_complete) and (current_side == "front"):
+            detected_objects_to_pick = global_detected_object_list_details
+        else:
+            detected_objects_to_pick = []
+
         # Generate the pick list
         pick_list_items = [object_item['name'] for object_item in object_list_param]
         # Get the index of the label of the detected object in the object_list_param
         # Determine if a first object exists in detected_objects, and check if in the pick list
-        if detected_objects and (detected_objects[0].label in pick_list_items):
+        if detected_objects_to_pick and (detected_objects_to_pick[0].label in pick_list_items):
             # Assign the contents of the correct object ot pick
-            object_to_pick = object_dict_items[detected_objects[0].label]
+            object_to_pick = object_dict_items[detected_objects_to_pick[0].label]
             # If yes, generate collision map, start with the table
             collision_map_pcl_list_form = cloud_table.to_array().tolist()
             # Add all other objects in the list
-            for other_item in detected_objects[1:]:
+            for other_item in detected_objects_to_pick[1:]:
                 collision_map_pcl_list_form += ros_to_pcl(other_item.cloud).to_array().tolist()
             # Publish collision map
             collision_map_pcl = pcl.PointCloud_PointXYZRGB()
@@ -829,6 +837,10 @@ def pcl_callback(pcl_msg):
 
             # Proceed to pick the object
             print("picking up " + object_to_pick["object_name"].data)
+            print("pick pose " + str(object_to_pick["pick_pose"]))
+            print("place pose " + str(object_to_pick["place_pose"]))
+            grasp_list = rospy.get_param('/grasp_list')
+            print("grasp_list " + str(grasp_list))
             rospy.wait_for_service('pick_place_routine')
 
             try:
