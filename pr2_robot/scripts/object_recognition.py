@@ -566,7 +566,7 @@ def pcl_callback(pcl_msg):
     # initialize empty lists that will hold labels and detected objects, as well as unidentified object counter
     detected_objects_labels = []
     detected_objects = []
-    unidentified_clusters = 0
+    uncertain_clusters = 0
 
     for index, pts_list in enumerate(cluster_indices):
         # Grab the points for the cluster
@@ -593,13 +593,13 @@ def pcl_callback(pcl_msg):
         # This will return the confidence value in of the prediction
         prediction_confidence = prediction_confidence_list[0][prediction]
 
-        # If the prediction_confidence is greater than 65%, proceed, else, add 1 to unidentified cluster counter
-        if prediction_confidence > 0.65:
+        # If the prediction_confidence is greater than 60%, proceed, else, add 1 to unidentified cluster counter
+        if prediction_confidence > 0.60:
             label = encoder.inverse_transform(prediction)[0]
         else:
             label = encoder.inverse_transform(prediction)[0]
             # add a count to the unidentified clusters
-            unidentified_clusters += 1
+            uncertain_clusters += 1
             print("not sure if this is really a " + label)
 
         # Add the label to the list of detected object's labels
@@ -621,8 +621,9 @@ def pcl_callback(pcl_msg):
     # and we're not reidentifying the same set of items
     # then raise the flags that identification is complete
     if WORLD == "challenge":
-        if detected_objects and (unidentified_clusters == 0) and (
+        if detected_objects and (uncertain_clusters <= 1) and (
             set(global_detected_object_labels) != set(detected_objects_labels)):
+            print("current side ", current_side)
             if current_side == "right":
                 right_objects_complete = True
                 global_detected_object_list_details.extend(detected_objects)
