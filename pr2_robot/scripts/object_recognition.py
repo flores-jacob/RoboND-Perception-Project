@@ -735,10 +735,10 @@ def pcl_callback(pcl_msg):
     # If items from the pick_list is present, generate the yaml file
     if dict_list:
         if WORLD == 'test':
-            send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
+            send_to_yaml("./output_yaml/output_" + str(test_scene_num.data) + ".yaml", dict_list)
             print("TEST WORLD yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
         elif (WORLD == 'challenge') and right_objects_complete and left_objects_complete:
-            send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
+            send_to_yaml("./output_yaml/output_" + str(test_scene_num.data) + ".yaml", dict_list)
             print("CHALLENGE WORLD yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
 
     # Perform pick_place_routine
