@@ -37,17 +37,17 @@ from sensor_msgs.msg import JointState
 from std_srvs.srv import Empty
 
 import math
+import time
 
 DEV_FLAG = 0
 OUTPUT_PCD_DIRECTORY = "output_pcd_files"
 
-WORLD_setting = "test1" # set to "test1" for test1.world and pick_list1.yaml
-                        # set to "test2" for test2.world and pick_list2.yaml
-                        # set to "test3" for test3.world and pick_list3.yaml
-                        # set to "challenge" for challenge.world and pick_list4.yaml
+WORLD_setting = "challenge"  # set to "test1" for test1.WORLD_setting and pick_list1.yaml
+                # set to "test2" for test2.WORLD_setting and pick_list2.yaml
+                # set to "test3" for test3.WORLD_setting and pick_list3.yaml
+                # set to "challenge" for challenge.WORLD_setting and pick_list4.yaml
 
-# Set to True to enable pick place routine.  Otherwise, set to False if only object recognition is required
-ENABLE_PICK_PLACE_ROUTINE = False
+ENABLE_PICK_PLACE_ROUTINE = True
 
 if WORLD_setting == "test1":
     TEST_SCENE_NUM = 1
@@ -234,6 +234,8 @@ def passthrough_filter_challenge_world(pcl_cloud):
     # Assign axis and range to the passthrough filter object.
     filter_axis = 'z'
     passthrough_filter_top.set_filter_field_name(filter_axis)
+    # top_axis_min = .6101
+    # .6 for test world .5 or 0 for challenge world
     top_axis_min = 0.826
     top_axis_max = 1.0
     passthrough_filter_top.set_filter_limits(top_axis_min, top_axis_max)
@@ -346,6 +348,50 @@ def compute_place_pose_offsets(item_number_for_group, place_position_horizontal_
         vertical_adjustment = -0.9
 
     return horizontal_adjustment, vertical_adjustment
+
+
+def compute_challenge_world_place_pose(item_number_for_group, y_coefficient=0.3, reverse_y=False):
+
+    # this first object for the arm is placed on these coordinates
+    if item_number_for_group == 1:
+        # placed on the top front table
+        xpos = 0.8
+        # placed a bit off from the center  of the table, towards the left
+        ypos = 1 * y_coefficient
+        # placed on the top front table
+        zpos = 0.9
+    # this second object for the arm is placed on these coordinates
+    elif item_number_for_group == 2:
+        # placed on the top front table
+        xpos = 0.8
+        # placed a bit off from the center  of the table, towards the left
+        ypos = 2 * y_coefficient
+        # placed on the top front table
+        zpos = 0.9
+    elif item_number_for_group == 3:
+        # placed on the bottom front table
+        xpos = 0.45
+        # placed a bit off from the center  of the table, towards the left
+        ypos = 1 * y_coefficient
+        # placed on the bottom front table
+        zpos = 0.6
+    elif item_number_for_group == 4:
+        # placed on the bottom front table
+        xpos = 0.45
+        # placed a bit off from the center  of the table, towards the left
+        ypos = 2 * y_coefficient
+        # placed on the bottom front table
+        zpos = 0.6
+    else:
+        xpos = 0
+        ypos = 0
+        zpos = 0
+
+    # if we are using the right arm, and we want to line the objects to the right, we reverse the y value
+    if reverse_y:
+        ypos = -ypos
+
+    return xpos, ypos, zpos
 
 
 # Callback function for your Point Cloud Subscriber
@@ -520,7 +566,7 @@ def pcl_callback(pcl_msg):
     # initialize empty lists that will hold labels and detected objects, as well as unidentified object counter
     detected_objects_labels = []
     detected_objects = []
-    unidentified_clusters = 0
+    uncertain_clusters = 0
 
     for index, pts_list in enumerate(cluster_indices):
         # Grab the points for the cluster
@@ -547,13 +593,13 @@ def pcl_callback(pcl_msg):
         # This will return the confidence value in of the prediction
         prediction_confidence = prediction_confidence_list[0][prediction]
 
-        # If the prediction_confidence is greater than 65%, proceed, else, add 1 to unidentified cluster counter
-        if prediction_confidence > 0.65:
+        # If the prediction_confidence is greater than 60%, proceed, else, add 1 to unidentified cluster counter
+        if prediction_confidence > 0.60:
             label = encoder.inverse_transform(prediction)[0]
         else:
             label = encoder.inverse_transform(prediction)[0]
             # add a count to the unidentified clusters
-            unidentified_clusters += 1
+            uncertain_clusters += 1
             print("not sure if this is really a " + label)
 
         # Add the label to the list of detected object's labels
@@ -575,8 +621,9 @@ def pcl_callback(pcl_msg):
     # and we're not reidentifying the same set of items
     # then raise the flags that identification is complete
     if WORLD == "challenge":
-        if detected_objects and (unidentified_clusters == 0) and (
+        if detected_objects and (uncertain_clusters <= 1) and (
             set(global_detected_object_labels) != set(detected_objects_labels)):
+            print("current side ", current_side)
             if current_side == "right":
                 right_objects_complete = True
                 global_detected_object_list_details.extend(detected_objects)
@@ -686,16 +733,25 @@ def pcl_callback(pcl_msg):
                     dropbox1_picked_count += 1
                     print("first", dropbox1_picked_count)
 
-                    # compute horizontal and vertical adjustment for place pose
-                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(dropbox1_picked_count,
-                                                                                            place_position_horizontal_coefficient,
-                                                                                            place_position_vertical_coefficient)
+                    if WORLD == "test":
+                        # compute horizontal and vertical adjustment for place pose
+                        horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(dropbox1_picked_count,
+                                                                                                place_position_horizontal_coefficient,
+                                                                                                place_position_vertical_coefficient)
 
-                    place_position = Point()
+                        place_position = Point()
 
-                    place_position.x = dropbox[0]['position'][0] + vertical_adjustment
-                    place_position.y = dropbox[0]['position'][1] + horizontal_adjustment
-                    place_position.z = dropbox[0]['position'][2]
+                        place_position.x = dropbox[0]['position'][0] + vertical_adjustment
+                        place_position.y = dropbox[0]['position'][1] + horizontal_adjustment
+                        place_position.z = dropbox[0]['position'][2]
+                    elif WORLD == "challenge":
+                        xpos, ypos, zpos = compute_challenge_world_place_pose(dropbox1_picked_count)
+
+                        place_position = Point()
+
+                        place_position.x = xpos
+                        place_position.y = ypos
+                        place_position.z = zpos
 
                     place_pose.position = place_position
 
@@ -705,16 +761,25 @@ def pcl_callback(pcl_msg):
 
                     print("second", dropbox2_picked_count)
 
-                    # compute horizontal and vertical adjustment for place pose
-                    horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(dropbox2_picked_count,
-                                                                                            place_position_horizontal_coefficient,
-                                                                                            place_position_vertical_coefficient)
+                    if WORLD == "test":
+                        # compute horizontal and vertical adjustment for place pose
+                        horizontal_adjustment, vertical_adjustment = compute_place_pose_offsets(dropbox2_picked_count,
+                                                                                                place_position_horizontal_coefficient,
+                                                                                                place_position_vertical_coefficient)
 
-                    place_position = Point()
+                        place_position = Point()
 
-                    place_position.x = dropbox[1]['position'][0] + vertical_adjustment
-                    place_position.y = dropbox[1]['position'][1] + horizontal_adjustment
-                    place_position.z = dropbox[1]['position'][2]
+                        place_position.x = dropbox[1]['position'][0] + vertical_adjustment
+                        place_position.y = dropbox[1]['position'][1] + horizontal_adjustment
+                        place_position.z = dropbox[1]['position'][2]
+                    elif WORLD == "challenge":
+                        xpos, ypos, zpos = compute_challenge_world_place_pose(dropbox2_picked_count, reverse_y=True)
+
+                        place_position = Point()
+
+                        place_position.x = xpos
+                        place_position.y = ypos
+                        place_position.z = zpos
 
                     place_pose.position = place_position
 
@@ -735,26 +800,34 @@ def pcl_callback(pcl_msg):
     # If items from the pick_list is present, generate the yaml file
     if dict_list:
         if WORLD == 'test':
-            send_to_yaml("./output_yaml/output_" + str(test_scene_num.data) + ".yaml", dict_list)
+            send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
             print("TEST WORLD yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
         elif (WORLD == 'challenge') and right_objects_complete and left_objects_complete:
-            send_to_yaml("./output_yaml/output_" + str(test_scene_num.data) + ".yaml", dict_list)
+            send_to_yaml("./output_" + str(test_scene_num.data) + ".yaml", dict_list)
             print("CHALLENGE WORLD yaml messages generated and saved to output_" + str(test_scene_num.data) + ".yaml")
 
     # Perform pick_place_routine
     # If the pick place routine is enabled, and the world is a test world
-    if ENABLE_PICK_PLACE_ROUTINE and (WORLD == 'test'):
+    if ENABLE_PICK_PLACE_ROUTINE:
+        # Assign which detected object list to work on
+        if WORLD == "test":
+            detected_objects_to_pick = detected_objects
+        elif (WORLD == "challenge") and (right_objects_complete and left_objects_complete) and (current_side == "front"):
+            detected_objects_to_pick = global_detected_object_list_details
+        else:
+            detected_objects_to_pick = []
+
         # Generate the pick list
         pick_list_items = [object_item['name'] for object_item in object_list_param]
         # Get the index of the label of the detected object in the object_list_param
         # Determine if a first object exists in detected_objects, and check if in the pick list
-        if detected_objects and (detected_objects[0].label in pick_list_items):
+        if detected_objects_to_pick and (detected_objects_to_pick[0].label in pick_list_items):
             # Assign the contents of the correct object ot pick
-            object_to_pick = object_dict_items[detected_objects[0].label]
+            object_to_pick = object_dict_items[detected_objects_to_pick[0].label]
             # If yes, generate collision map, start with the table
             collision_map_pcl_list_form = cloud_table.to_array().tolist()
             # Add all other objects in the list
-            for other_item in detected_objects[1:]:
+            for other_item in detected_objects_to_pick[1:]:
                 collision_map_pcl_list_form += ros_to_pcl(other_item.cloud).to_array().tolist()
             # Publish collision map
             collision_map_pcl = pcl.PointCloud_PointXYZRGB()
@@ -764,6 +837,10 @@ def pcl_callback(pcl_msg):
 
             # Proceed to pick the object
             print("picking up " + object_to_pick["object_name"].data)
+            print("pick pose " + str(object_to_pick["pick_pose"]))
+            print("place pose " + str(object_to_pick["place_pose"]))
+            grasp_list = rospy.get_param('/grasp_list')
+            print("grasp_list " + str(grasp_list))
             rospy.wait_for_service('pick_place_routine')
 
             try:
