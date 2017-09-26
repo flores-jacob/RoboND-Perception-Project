@@ -81,10 +81,26 @@ We color code each point to show which cluster it belongs to
 #### 2. Complete Exercise 3 Steps.  Features are extracted and an SVM is trained.  Object recognition is implemented.
 For exercise 3, we: 
 1. Generate training sets by capturing color and normal histograms of objects.  A copy of the script used here can be
-found at `~/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/capture_features.py`. In this instance, we 
+found at 
+```
+~/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/capture_features.py
+```
+. In this instance, we 
 iterated 50 times for each object. A copy of the resultant training set can be found at 
-`~/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/training_sets/training_set_complete_50.sav`. 
-2. Once training sets have been generated, we proceed to train our models using these.  A copy of the training script used can be found at `~/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/train_svm.py` and the resulting model can be found at `~/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/models/model.sav`. The resultant confusion matrices are shown below
+```
+~/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/training_sets/training_set_complete_50.sav
+```
+. 
+2. Once training sets have been generated, we proceed to train our models using these.  A copy of the training script used can be found at
+```
+~/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/train_svm.py
+```
+and the resulting model can be found at
+```
+~/catkin_ws/src/RoboND-Perception-Project/exercise_3_code/models/model.sav
+```
+. 
+The resultant confusion matrices are shown below
 
 
 - Confusion Matrix
@@ -185,3 +201,6 @@ Most of the code has been done according to the exercises.  The major departures
 8. Object recognition using the aforementioned model
 9. Collision map generation - we use the clear_octomap service to periodically clear the collision map, and then repopulate it for each object recognition attempt.
 10. Pick place operation - some config files were adjusted to try to get the arm to actually pick the objects.  Although it may be possible the cause of the objects "slipping" from the gripper is the fact that object orientation data is needed to be supplied, apart from the object position. Further refinement of place pose assignment could also be done.
+
+
+Lastly the primary thing to improve is to attempt to have the robot arm execute pick and place operations in the challenge worldm and improve its performance in the test world.  It is currently successful in identifying all the objects in the worlds, however, more work needs to be done to enable to pick the objects in the challenge world, and to increase reliability of picking up the objects in the test worlds.
