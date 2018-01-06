@@ -6,7 +6,7 @@
 This is my implementation of the Udacity Robotics Nanodegree Perception Pick & Place project
 
 #### Problem Statement
-A PR2 robot is in front of a table with multiple objects on it.  It needs to pick the objects based on how they are ordered on a provided list (book, glue, snacks, soap, etc.) and place them into the object's designated bin. The robot has a 3d camera feed, meaning it can see, and it can judge distances. Unfortunately, it does not know what a snack is and what it looks like.  It also does not know where the table ends, and where the objects on the table begin. To the robot, it all seems to appear as one single object.
+A PR2 robot is in front of a table with multiple objects on it.  It needs to pick the objects based on how they are ordered on a provided list (book, glue, snacks, soap, etc.) and place them into the object's designated bin. The robot has an RGBD feed, meaning it can see, and it can judge distances. Unfortunately, it does not know what the objects in the list are, what they look like, and how to identify them.  It also does not know where the table ends, and where the objects on the table begin. To the robot, it all seems to appear as one single object.
 
 As such, the tasks required to be accomplished in this project are the following.  First, we need to enable the robot to segment the items on the table from each other, and from the table itself.  It should know that the soap lying on the table is not part of the table, and that the table is not part of the soap.  Secondly, we need to enable to robot to know what a book, or any of the other objects on the table look like, so that it will be able to identify one when seen.  Lastly, once the robot is able to properly identify all the objects on the table, it should be able to pick these objects and place them into their designated bins.
 
@@ -57,6 +57,9 @@ As such, the tasks required to be accomplished in this project are the following
     ```
 
 #### How to run the code
+0. Make sure to follow any setup steps from the original project page
+    - [Original Project Page](https://github.com/udacity/RoboND-Perception-Project)
+
 1. Modify the file `~/catkin_ws/src/RoboND-Perception-Project/pr2_robot/launch/pick_place_project.launch` and set the world name (Line 13) to either `test1.world`, `test2.world`, `test3.world`, or `challenge.world`. Also set the pick list (Line 39) to either `pick_list1.yaml` for `test1.world`, `pick_list2.yaml` for `test2.world`, `pick_list3.yaml` for `test3.world`, and `pick_list4.yaml` for `challenge.world`.
 
 2. Build the project 
